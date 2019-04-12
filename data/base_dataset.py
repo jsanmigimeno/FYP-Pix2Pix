@@ -86,16 +86,12 @@ def get_transform(opt, params=None, grayscale=False, method=Image.BICUBIC, conve
         osize = [opt.load_size, opt.load_size]
         transform_list.append(transforms.Resize(osize, method))
     elif 'scale_width' in opt.preprocess:
-        print("Resising")
         transform_list.append(transforms.Lambda(lambda img: __scale_width(img, opt.load_size, method)))
 
     if 'crop' in opt.preprocess:
-        print("cropping")
         if params is None:
-            print("randcrop")
             transform_list.append(transforms.RandomCrop(opt.crop_size))
         else:
-            print("fixed crop")
             transform_list.append(transforms.Lambda(lambda img: __crop(img, params['crop_pos'], opt.crop_size)))
 
     if opt.preprocess == 'none':
