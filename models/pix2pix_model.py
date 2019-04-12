@@ -48,7 +48,7 @@ class Pix2PixModel(BaseModel):
         # specify the images you want to save/display. The training/test scripts will call <BaseModel.get_current_visuals>
         self.visual_names = ['real_A', 'fake_B', 'real_B']
         # specify the models you want to save to the disk. The training/test scripts will call <BaseModel.save_networks> and <BaseModel.load_networks>
-        if self.isTrain:
+        if self.isTrain or opt.phase == 'val':
             self.model_names = ['G', 'D']
         else:  # during test time, only load G
             self.model_names = ['G']
@@ -56,11 +56,11 @@ class Pix2PixModel(BaseModel):
         self.netG = networks.define_G(opt.input_nc, opt.output_nc, opt.ngf, opt.netG, opt.norm,
                                       not opt.no_dropout, opt.init_type, opt.init_gain, self.gpu_ids)
 
-        if self.isTrain:  # define a discriminator; conditional GANs need to take both input and output images; Therefore, #channels for D is input_nc + output_nc
+        if self.isTrain or opt.phase == 'val':  # define a discriminator; conditional GANs need to take both input and output images; Therefore, #channels for D is input_nc + output_nc
             self.netD = networks.define_D(opt.input_nc + opt.output_nc, opt.ndf, opt.netD,
                                           opt.n_layers_D, opt.norm, opt.init_type, opt.init_gain, self.gpu_ids)
 
-        if self.isTrain:
+        if self.isTrain or opt.phase == 'val':
             # define loss functions
             self.criterionGAN = networks.GANLoss(opt.gan_mode).to(self.device)
             self.criterionL1 = torch.nn.L1Loss()
@@ -125,3 +125,6 @@ class Pix2PixModel(BaseModel):
         self.optimizer_G.zero_grad()        # set G's gradients to zero
         self.backward_G()                   # calculate graidents for G
         self.optimizer_G.step()             # udpate G's weights
+
+    def get_L1_loss(self):
+        return self.criterionL1(self.fake_B, self.real_B) * self.opt.lambda_L1
