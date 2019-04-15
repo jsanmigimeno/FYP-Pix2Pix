@@ -32,6 +32,7 @@ from data import create_dataset
 from models import create_model
 from util.visualizer import save_images
 from util import html
+import torch
 
 
 if __name__ == '__main__':
@@ -51,6 +52,11 @@ if __name__ == '__main__':
     # test with eval mode. This only affects layers like batchnorm and dropout.
     # For [pix2pix]: we use batchnorm and dropout in the original pix2pix. You can experiment it with and without eval() mode.
     # For [CycleGAN]: It should not affect CycleGAN as CycleGAN uses instancenorm without dropout.
+
+    L1_total = 0
+    PSNR_total = 0
+    SSIM_total = 0
+
     if opt.eval:
         model.eval()
     for i, data in enumerate(dataset):
@@ -60,7 +66,22 @@ if __name__ == '__main__':
         model.test()           # run inference
         visuals = model.get_current_visuals()  # get image results
         img_path = model.get_image_paths()     # get image paths
-        if i % 5 == 0:  # save images to an HTML file
+        if i % 5 == 0:  
             print('processing (%04d)-th image... %s' % (i, img_path))
+
+        # Get losses
+        L1 = model.get_L1_loss()
+        L1_total += L1
+        PSNR = model.get_PSNR()
+        PSNR_total += PSNR
+        SSIM = model.get_SSIM()
+        SSIM_total += SSIM
+
+        # save images to an HTML file
         save_images(webpage, visuals, img_path, aspect_ratio=opt.aspect_ratio, width=opt.display_winsize)
+        webpage.add_text(("Losses - L1: %.4f, PSNR: %.4f, SSIM: %.4f" % (L1, PSNR, SSIM)))
+
+    test_size = len(dataset)
+    webpage.add_header("Overall performance")
+    webpage.add_text(("L1: %.4f, PSNR %.4f, SSIM: %.4f" % (L1_total/test_size, PSNR_total/test_size, SSIM_total/test_size)))    
     webpage.save()  # save the HTML

@@ -1,6 +1,8 @@
 import torch
 from .base_model import BaseModel
 from . import networks
+from math import log10
+from util import ssim
 
 
 class Pix2PixModel(BaseModel):
@@ -60,10 +62,11 @@ class Pix2PixModel(BaseModel):
             self.netD = networks.define_D(opt.input_nc + opt.output_nc, opt.ndf, opt.netD,
                                           opt.n_layers_D, opt.norm, opt.init_type, opt.init_gain, self.gpu_ids)
 
+        self.criterionL1 = torch.nn.L1Loss()
+        self.criterionMSE = torch.nn.MSELoss()
         if self.isTrain or opt.phase == 'val':
             # define loss functions
             self.criterionGAN = networks.GANLoss(opt.gan_mode).to(self.device)
-            self.criterionL1 = torch.nn.L1Loss()
             # initialize optimizers; schedulers will be automatically created by function <BaseModel.setup>.
             self.optimizer_G = torch.optim.Adam(self.netG.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
             self.optimizer_D = torch.optim.Adam(self.netD.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
@@ -127,4 +130,11 @@ class Pix2PixModel(BaseModel):
         self.optimizer_G.step()             # udpate G's weights
 
     def get_L1_loss(self):
-        return self.criterionL1(self.fake_B, self.real_B)
+        return self.criterionL1(self.fake_B, self.real_B).item()
+
+    def get_PSNR(self):
+        mse = self.criterionMSE(self.fake_B, self.real_B).item()
+        return 10 * log10(1/mse)
+
+    def get_SSIM(self):
+        return ssim.ssim(self.fake_B, self.real_B)

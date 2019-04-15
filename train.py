@@ -115,7 +115,7 @@ if __name__ == '__main__':
             for i, data in enumerate(dataset_val):
                 model_val.set_input(data)  # unpack data from data loader
                 model_val.test()           # run inference
-                valLoss += model_val.get_L1_loss().item()
+                valLoss += model_val.get_L1_loss()
                 if i % 50 == 0:  # save images to an HTML file  
                     img_path = model_val.get_image_paths()     # get image paths
                     print('processing (%04d)-th image... %s' % (i, img_path))

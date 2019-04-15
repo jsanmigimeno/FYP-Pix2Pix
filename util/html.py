@@ -28,9 +28,9 @@ class HTML:
             os.makedirs(self.img_dir)
 
         self.doc = dominate.document(title=title)
-        if refresh > 0:
-            with self.doc.head:
-                meta(http_equiv="refresh", content=str(refresh))
+        # if refresh > 0:
+        #     with self.doc.head:
+        #         meta(http_equiv="refresh", content=str(refresh))   # Remove 'refresh' to avoid website constant refresh in chrome
 
     def get_image_dir(self):
         """Return the directory that stores images"""
@@ -64,6 +64,11 @@ class HTML:
                                 img(style="width:%dpx" % width, src=os.path.join('images', im))
                             br()
                             p(txt)
+
+    def add_text(self, text):
+        with self.doc:
+            p(text)
+            br()
 
     def save(self):
         """save the current content to the HMTL file"""
