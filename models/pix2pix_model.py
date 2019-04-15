@@ -127,4 +127,4 @@ class Pix2PixModel(BaseModel):
         self.optimizer_G.step()             # udpate G's weights
 
     def get_L1_loss(self):
-        return self.criterionL1(self.fake_B, self.real_B) * self.opt.lambda_L1
+        return self.criterionL1(self.fake_B, self.real_B)
