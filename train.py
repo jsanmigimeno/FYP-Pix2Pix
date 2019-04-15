@@ -23,6 +23,9 @@ from options.train_options import TrainOptions
 from data import create_dataset
 from models import create_model
 from util.visualizer import Visualizer
+import copy
+import os
+from util import html
 
 if __name__ == '__main__':
     opt = TrainOptions().parse()   # get training options
@@ -34,6 +37,39 @@ if __name__ == '__main__':
     model.setup(opt)               # regular setup: load and print networks; create schedulers
     visualizer = Visualizer(opt)   # create a visualizer that display/save images and plots
     total_iters = 0                # the total number of training iterations
+
+    # Validation
+    if opt.use_validation:
+        opt_val = copy.deepcopy(opt)
+        print('\nUsing validation.  Parameters:')
+        opt_val.phase = 'val'
+        #opt_val.name = 'val_' + opt_val.name
+        opt_val.num_threads = 0   # test code only supports num_threads = 1
+        opt_val.batch_size = 1    # test code only supports batch_size = 1
+        opt_val.serial_batches = True  # disable data shuffling; comment this line if results on randomly chosen images are needed.
+        opt_val.no_flip = True    # no flip; comment this line if results on flipped images are needed.
+        opt_val.display_id = -1     # no visdom display; the test code saves the results to a HTML file.
+        dataset_val = create_dataset(opt_val)
+        dataset_val_size = len(dataset_val)
+        print('The number of validation images = %d' % dataset_val_size)
+        
+        opt_val.ntest = float("inf")
+        opt_val.results_dir='./val/'
+        opt_val.aspect_ratio =1.0
+        opt_val.num_test = dataset_val_size
+        opt_val.isTrain = False
+        opt_val.load_size = opt_val.crop_size
+
+        model_val = create_model(opt_val)
+        model_val.setup(opt_val)
+        model_val.netD = model.netD
+        model_val.netG = model.netG
+        total_val_iters = 0
+        val_log_name = os.path.join(opt_val.checkpoints_dir, opt_val.name, 'val_loss_log.txt')
+        
+        with open(val_log_name, "a") as log_file:
+            now = time.strftime("%c")
+            log_file.write('================ Validation Loss (%s) ================\n' % now)
 
     for epoch in range(opt.epoch_count, opt.niter + opt.niter_decay + 1):    # outer loop for different epochs; we save the model by <epoch_count>, <epoch_count>+<save_latest_freq>
         epoch_start_time = time.time()  # timer for entire epoch
@@ -72,6 +108,23 @@ if __name__ == '__main__':
             print('saving the model at the end of epoch %d, iters %d' % (epoch, total_iters))
             model.save_networks('latest')
             model.save_networks(epoch)
+        
+        # Validation
+        if opt.use_validation:
+            valLoss = 0
+            for i, data in enumerate(dataset_val):
+                model_val.set_input(data)  # unpack data from data loader
+                model_val.test()           # run inference
+                valLoss += model_val.get_L1_loss().item()
+                if i % 50 == 0:  # save images to an HTML file  
+                    img_path = model_val.get_image_paths()     # get image paths
+                    print('processing (%04d)-th image... %s' % (i, img_path))
+
+            valLoss = valLoss/dataset_val_size
+            message = '%s: %d %s: %.3f ' % ('epoch', epoch, 'Val_L1', valLoss)
+            with open(val_log_name, 'a') as val_log:
+                val_log.write('%s\n' % message)
+
 
         print('End of epoch %d / %d \t Time Taken: %d sec' % (epoch, opt.niter + opt.niter_decay, time.time() - epoch_start_time))
         model.update_learning_rate()                     # update learning rates at the end of every epoch.
