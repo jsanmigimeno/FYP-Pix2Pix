@@ -14,4 +14,15 @@ def parseLog(filePath):
     data["epoch"] = data["epoch"].str.replace(",","").astype(float)
     return data
 
-logDf = parseLog("E:\FYP\Training Downscaled JPEG\loss_logMerged.txt")
+def parseLogVal(filePath):
+    # Column names of log file
+    colNames = ["epochT", "epoch", "valT", "val"]
+    # Import data
+    data = pd.read_csv(filePath, sep=" ", header=None, names=colNames, skiprows=1, index_col=False)
+    return data
+
+#logDf = parseLog("E:\FYP\Training Downscaled JPEG\loss_logMerged.txt")
+
+valD = parseLogVal("C:\\Users\\Work\Downloads\\val_loss_log.txt")
+valD.plot()
+plt.show()
