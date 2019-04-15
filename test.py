@@ -56,6 +56,7 @@ if __name__ == '__main__':
     L1_total = 0
     PSNR_total = 0
     SSIM_total = 0
+    matching_total = 0
 
     if opt.eval:
         model.eval()
@@ -76,6 +77,8 @@ if __name__ == '__main__':
         PSNR_total += PSNR
         SSIM = model.get_SSIM()
         SSIM_total += SSIM
+        matching = model.get_Matching()
+
 
         # save images to an HTML file
         save_images(webpage, visuals, img_path, aspect_ratio=opt.aspect_ratio, width=opt.display_winsize)

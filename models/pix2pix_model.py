@@ -138,3 +138,6 @@ class Pix2PixModel(BaseModel):
 
     def get_SSIM(self):
         return ssim.ssim(self.fake_B, self.real_B)
+
+    def get_Matching(self):
+        return 0
