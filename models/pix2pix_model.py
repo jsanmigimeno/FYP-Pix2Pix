@@ -137,7 +137,7 @@ class Pix2PixModel(BaseModel):
         return 10 * log10(1/mse)
 
     def get_SSIM(self):
-        return ssim.ssim(self.fake_B, self.real_B)
+        return ssim.ssim(self.fake_B, self.real_B).item()
 
     def get_Matching(self):
         return 0
