@@ -3,7 +3,8 @@ from .base_model import BaseModel
 from . import networks
 from math import log10
 from util import ssim
-
+import numpy as np
+import matching_tools.utils as matching_utils
 
 class Pix2PixModel(BaseModel):
     """ This class implements the pix2pix model, for learning a mapping from input images to output images given paired data.
@@ -31,7 +32,7 @@ class Pix2PixModel(BaseModel):
         By default, we use vanilla GAN loss, UNet with batchnorm, and aligned datasets.
         """
         # changing the default values to match the pix2pix paper (https://phillipi.github.io/pix2pix/)
-        parser.set_defaults(norm='batch', netG='unet_256', dataset_mode='aligned')
+        parser.set_defaults(norm='batch', netG='unet_256', dataset_mode='unaligned')
         if is_train:
             parser.set_defaults(pool_size=0, gan_mode='vanilla')
             parser.add_argument('--lambda_L1', type=float, default=100.0, help='weight for L1 loss')
@@ -140,4 +141,19 @@ class Pix2PixModel(BaseModel):
         return ssim.ssim(self.fake_B, self.real_B).item()
 
     def get_Matching(self):
-        return 0
+
+        # TODO: Use opt to set path to checkpoint
+        checkpoint_path = './matching_tools/HardNet++.pth'
+        # Convert to Grayscale
+        real_B = matching_utils.rgb2gray(np.transpose(self.real_B.cpu().numpy()[0], (1, 2, 0)))
+        fake_B = matching_utils.rgb2gray(np.transpose(self.fake_B.cpu().numpy()[0], (1, 2, 0)))
+        indexes = matching_utils.get_keypoints_coordinates(real_B)
+        desc_real_B = matching_utils.compute_desc(real_B, indexes, checkpoint_path=checkpoint_path)
+        desc_fake_B = matching_utils.compute_desc(fake_B, indexes, checkpoint_path=checkpoint_path)
+
+        # match descriptors
+        matches = matching_utils.match(desc_real_B, desc_fake_B)
+        matches_np = matching_utils.convert_opencv_matches_to_numpy(matches)
+        true_matches = np.where(matches_np[:, 0] == matches_np[:, 1], 1., 0.)
+        matching_score = np.sum(true_matches) / len(true_matches)
+        return matching_score
