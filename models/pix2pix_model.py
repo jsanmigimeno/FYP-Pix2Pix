@@ -4,7 +4,7 @@ from . import networks
 from math import log10
 from util import ssim
 import numpy as np
-import matching_tools.utils as matching_utils
+from util import matching_tools.utils as matching_utils
 
 class Pix2PixModel(BaseModel):
     """ This class implements the pix2pix model, for learning a mapping from input images to output images given paired data.
@@ -143,7 +143,7 @@ class Pix2PixModel(BaseModel):
     def get_Matching(self):
 
         # TODO: Use opt to set path to checkpoint
-        checkpoint_path = './matching_tools/HardNet++.pth'
+        checkpoint_path = './util/matching_tools/HardNet++.pth'
         # Convert to Grayscale
         real_B = matching_utils.rgb2gray(np.transpose(self.real_B.cpu().numpy()[0], (1, 2, 0)))
         fake_B = matching_utils.rgb2gray(np.transpose(self.fake_B.cpu().numpy()[0], (1, 2, 0)))
