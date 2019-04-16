@@ -35,6 +35,7 @@ class Pix2PixModel(BaseModel):
         if is_train:
             parser.set_defaults(pool_size=0, gan_mode='vanilla')
             parser.add_argument('--lambda_L1', type=float, default=100.0, help='weight for L1 loss')
+            parser.add_argument('--lambda_desc', type=float, default=0.0, help='weight for descriptor loss')
 
         return parser
 
@@ -112,8 +113,10 @@ class Pix2PixModel(BaseModel):
         self.loss_G_GAN = self.criterionGAN(pred_fake, True)
         # Second, G(A) = B
         self.loss_G_L1 = self.criterionL1(self.fake_B, self.real_B) * self.opt.lambda_L1
+        # Third, descriptor loss
+        self.loss_G_Desc = self.get_Matching(output='tensor')*self.opt.lambda_desc
         # combine loss and calculate gradients
-        self.loss_G = self.loss_G_GAN + self.loss_G_L1
+        self.loss_G = self.loss_G_GAN + self.loss_G_L1 + self.loss_G_Desc
         self.loss_G.backward()
 
     def optimize_parameters(self):
@@ -129,15 +132,27 @@ class Pix2PixModel(BaseModel):
         self.backward_G()                   # calculate graidents for G
         self.optimizer_G.step()             # udpate G's weights
 
-    def get_L1_loss(self):
-        return self.criterionL1(self.fake_B, self.real_B).item()
+    def get_L1_loss(self, output='scalar'):
+        L1 = self.criterionL1(self.fake_B, self.real_B)
+        if output=='tensor':
+            return L1
+        else:
+            return L1.item() 
 
-    def get_PSNR(self):
+    def get_PSNR(self, output='scalar'):
         mse = self.criterionMSE(self.fake_B, self.real_B).item()
-        return 10 * log10(1/mse)
+        PSNR = 10 * torch.log10(1/mse)
+        if output=='tensor':
+            return PSNR
+        else:
+            return PSNR.item() 
 
-    def get_SSIM(self):
-        return ssim.ssim(self.fake_B, self.real_B).item()
+    def get_SSIM(self, output='scalar'):
+        ssimMeasure = ssim.ssim(self.fake_B, self.real_B).item()
+        if output=='tensor':
+            return ssimMeasure
+        else:
+            return ssimMeasure.item() 
 
-    def get_Matching(self):
+    def get_Matching(self, output='scalar'):
         return 0
