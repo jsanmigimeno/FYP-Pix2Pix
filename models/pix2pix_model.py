@@ -4,7 +4,7 @@ from . import networks
 from math import log10
 from util import ssim
 import numpy as np
-from util import matching_tools.utils as matching_utils
+from util.matching_tools import utils as matching_utils
 
 class Pix2PixModel(BaseModel):
     """ This class implements the pix2pix model, for learning a mapping from input images to output images given paired data.
