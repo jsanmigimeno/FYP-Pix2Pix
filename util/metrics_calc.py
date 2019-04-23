@@ -7,6 +7,8 @@ import ssim
 from PIL import Image
 from torchvision.transforms import ToTensor
 import matching_tools.utils as matching_utils
+from PIL import Image
+import torchvision.transforms as transforms
 
 def get_Matching(A, B):
     # TODO: Use opt to set path to checkpoint
@@ -26,6 +28,9 @@ def get_Matching(A, B):
     return matching_score
 
 path = "C:\\CodingSSD\\FYP-General\\SID_Dataset\\Downscaled_JPEG\\All\\Combined\\test"
+
+load_size = 256
+resizeTr = transforms.Resize([load_size, load_size], Image.BICUBIC)
 
 L1_total = 0
 PSNR_total = 0
@@ -49,6 +54,9 @@ for i, filename in enumerate(os.listdir(path)):
     w2 = int(w / 2)
     shortExpImg = img.crop((0, 0, w2, h))
     longExpImg = img.crop((w2, 0, w, h))
+    shortExpImg = resizeTr(shortExpImg)
+    longExpImg = resizeTr(longExpImg)
+
     shortExpImg = torch.unsqueeze(imgToTensor(shortExpImg), 0)
     longExpImg = torch.unsqueeze(imgToTensor(longExpImg), 0)
 
