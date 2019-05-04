@@ -3,6 +3,8 @@ from .base_model import BaseModel
 from . import networks
 from math import log10
 from util import ssim
+import numpy as np
+from util.matching_tools import utils as matching_utils
 
 
 class Pix2PixModel(BaseModel):
@@ -113,10 +115,13 @@ class Pix2PixModel(BaseModel):
         self.loss_G_GAN = self.criterionGAN(pred_fake, True)
         # Second, G(A) = B
         self.loss_G_L1 = self.criterionL1(self.fake_B, self.real_B) * self.opt.lambda_L1
-        # Third, descriptor loss
-        self.loss_G_Desc = self.get_Matching(output='tensor')*self.opt.lambda_desc
         # combine loss and calculate gradients
-        self.loss_G = self.loss_G_GAN + self.loss_G_L1 + self.loss_G_Desc
+        self.loss_G = self.loss_G_GAN + self.loss_G_L1
+        # Third, descriptor loss
+        if self.opt.lambda_desc != 0:
+            self.loss_G_Desc = self.get_Matching()*self.opt.lambda_desc
+            self.loss_G = self.loss_G + self.loss_G_Desc
+        
         self.loss_G.backward()
 
     def optimize_parameters(self):
@@ -154,5 +159,21 @@ class Pix2PixModel(BaseModel):
         else:
             return ssimMeasure.item() 
 
-    def get_Matching(self, output='scalar'):
-        return 0
+    def get_Matching(self):
+
+        # TODO: Use opt to set path to checkpoint
+        checkpoint_path = './util/matching_tools/HardNet++.pth'
+        # Convert to Grayscale
+        real_B = matching_utils.rgb2gray(np.transpose(self.real_B.cpu().detach().numpy()[0], (1, 2, 0))) # CAN DETACH?
+        fake_B = matching_utils.rgb2gray(np.transpose(self.fake_B.cpu().detach().numpy()[0], (1, 2, 0))) # CAN DETACH?
+        indexes = matching_utils.get_keypoints_coordinates(real_B)
+        desc_real_B = matching_utils.compute_desc(real_B, indexes, checkpoint_path=checkpoint_path)
+        desc_fake_B = matching_utils.compute_desc(fake_B, indexes, checkpoint_path=checkpoint_path)
+
+        # match descriptors
+        matches = matching_utils.match(desc_real_B, desc_fake_B)
+        matches_np = matching_utils.convert_opencv_matches_to_numpy(matches)
+        true_matches = np.where(matches_np[:, 0] == matches_np[:, 1], 1., 0.)
+        matching_score = np.sum(true_matches) / len(true_matches)
+
+        return matching_score
