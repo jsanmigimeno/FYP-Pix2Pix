@@ -2,6 +2,7 @@
 import sys
 import pandas as pd
 import matplotlib.pyplot as plt
+import numpy as np
 #%%
 def parseLog(filePath):
     # Column names of log file
@@ -23,6 +24,18 @@ def parseLogVal(filePath):
 
 #logDf = parseLog("E:\FYP\Training Downscaled JPEG\loss_logMerged.txt")
 
-valD = parseLogVal("C:\\Users\\Work\Downloads\\val_loss_log.txt")
-valD.plot()
+# Plot standard log
+L = parseLog("C:\\Users\\Work\\Downloads\\loss_log (1).txt")
+L1 = L['G_L1'].values
+epochs = L['epoch'].values.astype('int')
+maxEpoch = np.max(epochs)
+avgL1 = np.zeros(maxEpoch)
+for e in range(1, maxEpoch):
+    avgL1[e] = np.mean(L1[epochs==e])
+plt.plot(avgL1)
+plt.show()
+
+# Plot validation
+valD = parseLogVal("C:\\Users\\Work\\Downloads\\val_loss_log (1).txt")
+plt.plot(valD['val'].values)
 plt.show()
