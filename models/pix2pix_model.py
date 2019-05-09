@@ -144,7 +144,7 @@ class Pix2PixModel(BaseModel):
             return L1.item() 
 
     def get_PSNR(self, output='scalar'):
-        mse = self.criterionMSE(self.fake_B, self.real_B).item()
+        mse = self.criterionMSE(self.fake_B, self.real_B)
         PSNR = 10 * torch.log10(1/mse)
         if output=='tensor':
             return PSNR
@@ -152,7 +152,7 @@ class Pix2PixModel(BaseModel):
             return PSNR.item() 
 
     def get_SSIM(self, output='scalar'):
-        ssimMeasure = ssim.ssim(self.fake_B, self.real_B).item()
+        ssimMeasure = ssim.ssim(self.fake_B, self.real_B)
         if output=='tensor':
             return ssimMeasure
         else:
