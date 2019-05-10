@@ -48,7 +48,11 @@ class Pix2PixModel(BaseModel):
         """
         BaseModel.__init__(self, opt)
         # specify the training losses you want to print out. The training/test scripts will call <BaseModel.get_current_losses>
-        self.loss_names = ['G_GAN', 'G_L1', 'D_real', 'D_fake']
+        if self.opt.lambda_desc == 0:
+            self.loss_names = ['G_GAN', 'G_L1', 'D_real', 'D_fake']
+        else:
+            self.loss_names = ['G_GAN', 'G_L1', 'G_Matching', 'D_real', 'D_fake']
+        
         # specify the images you want to save/display. The training/test scripts will call <BaseModel.get_current_visuals>
         self.visual_names = ['real_A', 'fake_B', 'real_B']
         # specify the models you want to save to the disk. The training/test scripts will call <BaseModel.save_networks> and <BaseModel.load_networks>
@@ -117,9 +121,9 @@ class Pix2PixModel(BaseModel):
         # combine loss and calculate gradients
         self.loss_G = self.loss_G_GAN + self.loss_G_L1
         # Third, descriptor loss
-        if self.opt.lambda_desc != 0:
-            self.loss_G_Desc = self.get_Matching()*self.opt.lambda_desc
-            self.loss_G = self.loss_G + self.loss_G_Desc
+        if self.opt.lambda_desc != 0: # NOT DIFFERENTIABLE IMPLEMENTATION!
+            self.loss_G_Matching = (1-self.get_Matching())*self.opt.lambda_desc # Flip matching score (its range is in 0 to 1!)
+            self.loss_G = self.loss_G + self.loss_G_Matching
         
         self.loss_G.backward()
 
