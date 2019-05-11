@@ -34,6 +34,9 @@ class HardNet(nn.Module):
             nn.BatchNorm2d(128, affine=False),
         )
 
+        for param in self.features.parameters():
+            param.requires_grad = False
+
     def input_norm(self, x, eps=1e-6):
         x_flatten = x.view(x.shape[0], -1)
         x_mu = torch.mean(x_flatten, dim=-1, keepdim=True)
@@ -47,17 +50,32 @@ class HardNet(nn.Module):
         return F.normalize(x, dim=-1, p=2)
 
 class HardNetDescriptor(object):
-    def __init__(self, checkpoint_path, patch_size=32):
+    def __init__(self, checkpoint_path, patch_size=32, gpu_ids=[]):
         self.patch_size = patch_size
 
         self._model = HardNet()
+        self.gpu_ids = gpu_ids
+
+        # CPU/GPU
+        if len(gpu_ids) > 0:
+            assert(torch.cuda.is_available())
+            self._model.to(gpu_ids[0])
+            self._model = torch.nn.DataParallel(self._model, gpu_ids)  # multi-GPUs
+
         self._load_model(checkpoint_path)  # load pretrained model
 
     def _load_model(self, checkpoint_path):
         assert os.path.isfile(checkpoint_path), \
             "Invalid file: {}".format(checkpoint_path)
-        checkpoint = torch.load(checkpoint_path,
-            map_location=torch.device('cpu'))
+        
+        # CPU/GPU
+        if len(self.gpu_ids) > 0:
+            assert(torch.cuda.is_available())
+            checkpoint = torch.load(checkpoint_path,
+                map_location=torch.device('cuda'))
+        else:
+            checkpoint = torch.load(checkpoint_path,
+                map_location=torch.device('cpu'))
         self._model.load_state_dict(checkpoint['state_dict'], strict=True)
 
     def compute(self, image, kpts, mask=None):
@@ -65,12 +83,15 @@ class HardNetDescriptor(object):
            We assume image (H, W) numpy array in np.unit8
         """
         # extract patches and convert to torch tensor
-        patches = extract_patches_from_opencv_keypoints(image, kpts)
-        patches = torch.unsqueeze(torch.from_numpy(patches), dim=1)
+        #patches = extract_patches_from_opencv_keypoints(image, kpts)
+        patches = extract_patches_from_coords(image, kpts)
+
+        #patches = torch.unsqueeze(torch.from_numpy(patches), dim=1)
+        patches = torch.unsqueeze(patches, dim=1)
         patches = patches.float() / 255.
+
         # inference model with patches
         descs = self._model(patches)
-        descs = torch.squeeze(descs).cpu().detach().numpy()
         return kpts, descs
 
 
@@ -117,7 +138,7 @@ def get_keypoints_coordinates(img, patch_size=32, use_detector=False):
     return np.asarray(coordinates)
 
 def rgb2gray(rgb):
-    return np.dot(rgb[...,:3], [0.2989, 0.5870, 0.1140])
+    return rgb[...,:3] @ torch.tensor([0.2989, 0.5870, 0.1140])
 
 def convert_numpy_features_to_opencv_keypoints(features):
     """Returns a list of OpenCV keypoints from a np.ndarray array of features
@@ -134,6 +155,7 @@ def convert_numpy_features_to_opencv_keypoints(features):
 def extract_patches_from_opencv_keypoints(image, kpts, patch_size=32):
     """Extract image patches from OpenCV keypoints (cv2.KeyPoint)
     """
+    _image = image.clone().detach().requires_grad_(False).numpy()
     patches = []
     N = patch_size  # alias
     for kp in kpts:
@@ -146,15 +168,27 @@ def extract_patches_from_opencv_keypoints(image, kpts, patch_size=32):
             [+s * sin, +s * cos, (-s * sin - s * cos) * N / 2.0 + y]
         ])
 
-        res = cv2.warpAffine(image, H, (N, N),
+        res = cv2.warpAffine(_image, H, (N, N),
             flags=cv2.WARP_INVERSE_MAP + cv2.INTER_CUBIC + cv2.WARP_FILL_OUTLIERS)
         patches.append(res)
     return np.array(patches)
 
-def compute_desc(img, points, checkpoint_path):
+def extract_patches_from_coords(image, kpts, patch_size=32):
+    N = patch_size
+    N_half = N // 2
 
-    kpts = convert_numpy_features_to_opencv_keypoints(points)
+    dim_y, dim_x = image.shape[0] // patch_size, image.shape[1] // patch_size
+    patches = torch.Tensor(dim_y*dim_x, N, N)
+    for i, kp in enumerate(kpts):
+        patches[i] = image[kp[0]-N_half:kp[0]+N_half, kp[1]-N_half:kp[1]+N_half]
 
-    descriptor = HardNetDescriptor(checkpoint_path)
+    return patches
+
+def compute_desc(img, points, checkpoint_path, gpu_ids=[]):
+
+    #kpts = convert_numpy_features_to_opencv_keypoints(points)
+    kpts = points 
+
+    descriptor = HardNetDescriptor(checkpoint_path, gpu_ids)
     _, descs = descriptor.compute(img, kpts, None)
     return descs
