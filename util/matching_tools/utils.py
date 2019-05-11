@@ -55,13 +55,12 @@ class HardNetDescriptor(object):
 
         self._model = HardNet()
         self.gpu_ids = gpu_ids
-        print(self.gpu_ids)
+
         # CPU/GPU
         if len(gpu_ids) > 0:
-            print("moving model to cuda")
             assert(torch.cuda.is_available())
             self._model.to(gpu_ids[0])
-            self._model = torch.nn.DataParallel(self._model, gpu_ids)  # multi-GPUs
+
         self._load_model(checkpoint_path)  # load pretrained model
 
     def _load_model(self, checkpoint_path):
