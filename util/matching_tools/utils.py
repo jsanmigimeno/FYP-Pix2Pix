@@ -61,7 +61,7 @@ class HardNetDescriptor(object):
             assert(torch.cuda.is_available())
             self._model.to(gpu_ids[0])
             self._model = torch.nn.DataParallel(self._model, gpu_ids)  # multi-GPUs
-
+        print(self._model.device)
         self._load_model(checkpoint_path)  # load pretrained model
 
     def _load_model(self, checkpoint_path):
