@@ -188,6 +188,6 @@ def compute_desc(img, points, checkpoint_path, gpu_ids=[]):
     #kpts = convert_numpy_features_to_opencv_keypoints(points)
     kpts = points 
 
-    descriptor = HardNetDescriptor(checkpoint_path, gpu_ids)
+    descriptor = HardNetDescriptor(checkpoint_path, gpu_ids=gpu_ids)
     _, descs = descriptor.compute(img, kpts, None)
     return descs

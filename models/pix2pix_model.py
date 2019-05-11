@@ -171,6 +171,7 @@ class Pix2PixModel(BaseModel):
         fake_B = matching_utils.rgb2gray(self.fake_B[0].permute(1, 2, 0))
         indexes = matching_utils.get_keypoints_coordinates(real_B)
         print(self.gpu_ids)
+        
         desc_real_B = matching_utils.compute_desc(real_B, indexes, checkpoint_path=checkpoint_path, gpu_ids=self.gpu_ids)
         desc_fake_B = matching_utils.compute_desc(fake_B, indexes, checkpoint_path=checkpoint_path, gpu_ids=self.gpu_ids)
 
