@@ -172,6 +172,9 @@ class Pix2PixModel(BaseModel):
         indexes = matching_utils.get_keypoints_coordinates(real_B)
 
         desc_real_B = matching_utils.compute_desc(real_B, indexes, checkpoint_path=checkpoint_path, gpu_ids=self.gpu_ids)
+        print(desc_real_B.device)
+        assert(real_B.device == desc_real_B.device)
+        
         desc_fake_B = matching_utils.compute_desc(fake_B, indexes, checkpoint_path=checkpoint_path, gpu_ids=self.gpu_ids)
 
         return self.criterionL1(desc_real_B, desc_fake_B)
