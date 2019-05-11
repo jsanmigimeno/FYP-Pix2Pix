@@ -61,7 +61,6 @@ class HardNetDescriptor(object):
             assert(torch.cuda.is_available())
             self._model.to(gpu_ids[0])
             self._model = torch.nn.DataParallel(self._model, gpu_ids)  # multi-GPUs
-        print(self._model.device)
         self._load_model(checkpoint_path)  # load pretrained model
 
     def _load_model(self, checkpoint_path):
@@ -174,14 +173,16 @@ def extract_patches_from_opencv_keypoints(image, kpts, patch_size=32):
     return np.array(patches)
 
 def extract_patches_from_coords(image, kpts, patch_size=32):
+    print("Extracting patches. Image device:")
+    print(image.device)
     N = patch_size
     N_half = N // 2
 
     dim_y, dim_x = image.shape[0] // patch_size, image.shape[1] // patch_size
-    patches = torch.Tensor(dim_y*dim_x, N, N)
+    patches = torch.Tensor(dim_y*dim_x, N, N).to(image.device)
     for i, kp in enumerate(kpts):
         patches[i] = image[kp[0]-N_half:kp[0]+N_half, kp[1]-N_half:kp[1]+N_half]
-
+    print(patches.device)
     return patches
 
 def compute_desc(img, points, checkpoint_path, gpu_ids=[]):
