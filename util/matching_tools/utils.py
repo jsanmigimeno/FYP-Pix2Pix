@@ -55,7 +55,7 @@ class HardNetDescriptor(object):
 
         self._model = HardNet()
         self.gpu_ids = gpu_ids
-
+        print(self.gpu_ids)
         # CPU/GPU
         if len(gpu_ids) > 0:
             print("moving model to cuda")
