@@ -58,6 +58,7 @@ class HardNetDescriptor(object):
 
         # CPU/GPU
         if len(gpu_ids) > 0:
+            print("moving model to cuda")
             assert(torch.cuda.is_available())
             self._model.to(gpu_ids[0])
             self._model = torch.nn.DataParallel(self._model, gpu_ids)  # multi-GPUs
@@ -173,8 +174,6 @@ def extract_patches_from_opencv_keypoints(image, kpts, patch_size=32):
     return np.array(patches)
 
 def extract_patches_from_coords(image, kpts, patch_size=32):
-    print("Extracting patches. Image device:")
-    print(image.device)
     N = patch_size
     N_half = N // 2
 
@@ -182,7 +181,6 @@ def extract_patches_from_coords(image, kpts, patch_size=32):
     patches = torch.Tensor(dim_y*dim_x, N, N).to(image.device)
     for i, kp in enumerate(kpts):
         patches[i] = image[kp[0]-N_half:kp[0]+N_half, kp[1]-N_half:kp[1]+N_half]
-    print(patches.device)
     return patches
 
 def compute_desc(img, points, checkpoint_path, gpu_ids=[]):
