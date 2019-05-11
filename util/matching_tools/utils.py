@@ -138,7 +138,7 @@ def get_keypoints_coordinates(img, patch_size=32, use_detector=False):
     return np.asarray(coordinates)
 
 def rgb2gray(rgb):
-    return rgb[...,:3] @ torch.tensor([0.2989, 0.5870, 0.1140])
+    return rgb[...,:3] @ torch.tensor([0.2989, 0.5870, 0.1140]).to(rgb.device)
 
 def convert_numpy_features_to_opencv_keypoints(features):
     """Returns a list of OpenCV keypoints from a np.ndarray array of features
