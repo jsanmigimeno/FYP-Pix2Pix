@@ -187,8 +187,8 @@ class Pix2PixModel(BaseModel):
         desc_real_B = matching_utils.compute_desc(real_B, indexes, checkpoint_path=checkpoint_path, gpu_ids=self.gpu_ids)
         desc_fake_B = matching_utils.compute_desc(fake_B, indexes, checkpoint_path=checkpoint_path, gpu_ids=self.gpu_ids)
 
-        desc_real_B = desc_real_B.numpy()
-        desc_fake_B = desc_fake_B.detach().numpy()
+        desc_real_B = desc_real_B.cpu().numpy()
+        desc_fake_B = desc_fake_B.cpu().detach().numpy()
 
         # match descriptors
         matches = matching_utils.match(desc_real_B, desc_fake_B)
