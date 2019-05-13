@@ -124,7 +124,7 @@ if __name__ == '__main__':
                 L1_total += model_val.get_L1_loss()
                 PSNR_total += model_val.get_PSNR()
                 SSIM_total += model_val.get_SSIM()
-                descriptorL1, matching = model_val.get_Descriptor_loss_and_matching()
+                descriptorL1, matching = model_val.get_Descriptor_loss_and_matching(getMatching=true)
                 matching_total += matching
                 descriptor_L1_total += descriptorL1
 
