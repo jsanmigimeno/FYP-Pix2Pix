@@ -57,6 +57,7 @@ if __name__ == '__main__':
     PSNR_total = 0
     SSIM_total = 0
     matching_total = 0
+    descriptor_L1_total = 0
 
     if opt.eval:
         model.eval()
@@ -77,14 +78,15 @@ if __name__ == '__main__':
         PSNR_total += PSNR
         SSIM = model.get_SSIM()
         SSIM_total += SSIM
-        matching = model.get_Matching()
+        descriptorL1, matching = model.get_Descriptor_loss_and_matching()
         matching_total += matching
+        descriptor_L1_total += descriptorL1
 
         # save images to an HTML file
         save_images(webpage, visuals, img_path, aspect_ratio=opt.aspect_ratio, width=opt.display_winsize, compression=opt.output_extension)
-        webpage.add_text(("Losses - L1: %.4f, PSNR: %.4f, SSIM: %.4f, matching score: %.4f" % (L1, PSNR, SSIM, matching)))
+        webpage.add_text(("Losses - L1: %.4f, PSNR: %.4f, SSIM: %.4f, descriptor L1: %.4f, matching score: %.4f" % (L1, PSNR, SSIM, descriptorL1, matching)))
 
     test_size = len(dataset)
     webpage.add_header("Overall performance")
-    webpage.add_text(("L1: %.4f, PSNR %.4f, SSIM: %.4f, matching score: %.4f" % (L1_total/test_size, PSNR_total/test_size, SSIM_total/test_size, matching_total/test_size)))    
+    webpage.add_text(("L1: %.4f, PSNR %.4f, SSIM: %.4f, descriptor L1: %.4f, matching score: %.4f" % (L1_total/test_size, PSNR_total/test_size, SSIM_total/test_size, descriptor_L1_total/test_size, matching_total/test_size)))    
     webpage.save()  # save the HTML

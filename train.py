@@ -115,6 +115,7 @@ if __name__ == '__main__':
             PSNR_total = 0
             SSIM_total = 0
             matching_total = 0
+            descriptor_L1_total = 0
 
             for i, data in enumerate(dataset_val):
                 model_val.set_input(data)  # unpack data from data loader
@@ -123,7 +124,9 @@ if __name__ == '__main__':
                 L1_total += model_val.get_L1_loss()
                 PSNR_total += model_val.get_PSNR()
                 SSIM_total += model_val.get_SSIM()
-                matching_total += model_val.get_Matching()
+                descriptorL1, matching = model_val.get_Descriptor_loss_and_matching()
+                matching_total += matching
+                descriptor_L1_total += descriptorL1
 
                 if i % 50 == 0:  # Print state  
                     img_path = model_val.get_image_paths()     # get image paths
@@ -131,7 +134,7 @@ if __name__ == '__main__':
 
             valLoss = valLoss/dataset_val_size
             valLossM = valLossM/dataset_val_size
-            message = "Epoch: %.4f Val_L1: %.4f Val_PSNR %.4f Val_SSIM: %.4f Val_Match: %.4f" % (epoch, L1_total/dataset_val_size, PSNR_total/dataset_val_size, SSIM_total/dataset_val_size, matching_total/dataset_val_size)
+            message = "Epoch: %.4f Val_L1: %.4f Val_PSNR %.4f Val_SSIM: %.4f Val_Desc: %.4f Val_Match: %.4f" % (epoch, L1_total/dataset_val_size, PSNR_total/dataset_val_size, SSIM_total/dataset_val_size, descriptor_L1_total/dataset_val_size, matching_total/dataset_val_size)
             with open(val_log_name, 'a') as val_log:
                 val_log.write('%s\n' % message)
 

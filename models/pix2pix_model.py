@@ -38,6 +38,7 @@ class Pix2PixModel(BaseModel):
             parser.set_defaults(pool_size=0, gan_mode='vanilla')
             parser.add_argument('--lambda_L1', type=float, default=100.0, help='weight for L1 loss')
         parser.add_argument('--lambda_desc', type=float, default=0.0, help='weight for descriptor loss')
+        parser.add_argument('--disable_GAN_loss', type=bool, default=False, help='disable gan loss for debugging purposes')
 
         return parser
 
@@ -52,7 +53,7 @@ class Pix2PixModel(BaseModel):
         if self.opt.lambda_desc == 0:
             self.loss_names = ['G_GAN', 'G_L1', 'D_real', 'D_fake']
         else:
-            self.loss_names = ['G_GAN', 'G_L1', 'G_Desc', 'D_real', 'D_fake']
+            self.loss_names = ['G_GAN', 'G_L1', 'G_Desc', 'G_Matching', 'D_real', 'D_fake']
         
         # specify the images you want to save/display. The training/test scripts will call <BaseModel.get_current_visuals>
         self.visual_names = ['real_A', 'fake_B', 'real_B']
@@ -116,14 +117,15 @@ class Pix2PixModel(BaseModel):
         # First, G(A) should fake the discriminator
         fake_AB = torch.cat((self.real_A, self.fake_B), 1)
         pred_fake = self.netD(fake_AB)
-        self.loss_G_GAN = self.criterionGAN(pred_fake, True)
+        self.loss_G_GAN = self.criterionGAN(pred_fake, True) * (not self.opt.disable_GAN_loss)
         # Second, G(A) = B
         self.loss_G_L1 = self.criterionL1(self.fake_B, self.real_B) * self.opt.lambda_L1
         # combine loss and calculate gradients
         self.loss_G = self.loss_G_GAN + self.loss_G_L1
         # Third, descriptor loss
-        if self.opt.lambda_desc != 0: # NOT DIFFERENTIABLE IMPLEMENTATION!
-            self.loss_G_Desc = self.get_Descriptor_loss()*self.opt.lambda_desc 
+        if self.opt.lambda_desc != 0:
+            descriptorLoss, self.loss_G_matching = self.get_Descriptor_loss_and_matching(getMatching=True)
+            self.loss_G_Desc = descriptorLoss*self.opt.lambda_desc 
             self.loss_G = self.loss_G + self.loss_G_Desc
         
         self.loss_G.backward()
@@ -163,7 +165,7 @@ class Pix2PixModel(BaseModel):
         else:
             return ssimMeasure.item() 
 
-    def get_Descriptor_loss(self):
+    def get_Descriptor_loss_and_matching(self, getMatching=False):
         #Path to checkpoint
         checkpoint_path = self.opt.desc_weights_path
         # Convert to Grayscale
@@ -173,8 +175,19 @@ class Pix2PixModel(BaseModel):
 
         desc_real_B = matching_utils.compute_desc(real_B, indexes, checkpoint_path=checkpoint_path, gpu_ids=self.gpu_ids)
         desc_fake_B = matching_utils.compute_desc(fake_B, indexes, checkpoint_path=checkpoint_path, gpu_ids=self.gpu_ids)
+        
+        if getMatching:
+            desc_real_B_N = desc_real_B.clone().cpu().detach().numpy()
+            desc_fake_B_N = desc_fake_B.clone().cpu().detach().numpy()
 
-        return self.criterionL1(desc_real_B, desc_fake_B)
+            # match descriptors
+            matches = matching_utils.match(desc_real_B_N, desc_fake_B_N)
+            matches_np = matching_utils.convert_opencv_matches_to_numpy(matches)
+            true_matches = np.where(matches_np[:, 0] == matches_np[:, 1], 1., 0.)
+            matching_score = np.sum(true_matches) / len(true_matches)
+            return self.criterionL1(desc_real_B, desc_fake_B), matching_score
+        else:
+            return self.criterionL1(desc_real_B, desc_fake_B)
 
     def get_Matching(self):
         #Path to checkpoint
