@@ -132,8 +132,6 @@ if __name__ == '__main__':
                     img_path = model_val.get_image_paths()     # get image paths
                     print('processing (%04d)-th image... %s' % (i, img_path))
 
-            valLoss = valLoss/dataset_val_size
-            valLossM = valLossM/dataset_val_size
             message = "Epoch: %.4f Val_L1: %.4f Val_PSNR %.4f Val_SSIM: %.4f Val_Desc: %.4f Val_Match: %.4f" % (epoch, L1_total/dataset_val_size, PSNR_total/dataset_val_size, SSIM_total/dataset_val_size, descriptor_L1_total/dataset_val_size, matching_total/dataset_val_size)
             with open(val_log_name, 'a') as val_log:
                 val_log.write('%s\n' % message)
