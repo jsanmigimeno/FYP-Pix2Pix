@@ -81,7 +81,7 @@ if __name__ == '__main__':
         matching_total += matching
 
         # save images to an HTML file
-        save_images(webpage, visuals, img_path, aspect_ratio=opt.aspect_ratio, width=opt.display_winsize)
+        save_images(webpage, visuals, img_path, aspect_ratio=opt.aspect_ratio, width=opt.display_winsize, compression=opt.output_extension)
         webpage.add_text(("Losses - L1: %.4f, PSNR: %.4f, SSIM: %.4f, matching score: %.4f" % (L1, PSNR, SSIM, matching)))
 
     test_size = len(dataset)
