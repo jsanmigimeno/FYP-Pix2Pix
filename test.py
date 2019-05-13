@@ -78,7 +78,7 @@ if __name__ == '__main__':
         PSNR_total += PSNR
         SSIM = model.get_SSIM()
         SSIM_total += SSIM
-        descriptorL1, matching = model.get_Descriptor_loss_and_matching()
+        descriptorL1, matching = model.get_Descriptor_loss_and_matching(getMatching=True)
         matching_total += matching
         descriptor_L1_total += descriptorL1
 
