@@ -111,17 +111,27 @@ if __name__ == '__main__':
         
         # Validation
         if opt.use_validation:
-            valLoss = 0
+            L1_total = 0
+            PSNR_total = 0
+            SSIM_total = 0
+            matching_total = 0
+
             for i, data in enumerate(dataset_val):
                 model_val.set_input(data)  # unpack data from data loader
                 model_val.test()           # run inference
-                valLoss += model_val.get_L1_loss()
-                if i % 50 == 0:  # save images to an HTML file  
+                # Get losses
+                L1_total += model_val.get_L1_loss()
+                PSNR_total += model_val.get_PSNR()
+                SSIM_total += model_val.get_SSIM()
+                matching_total += model_val.get_Matching()
+
+                if i % 50 == 0:  # Print state  
                     img_path = model_val.get_image_paths()     # get image paths
                     print('processing (%04d)-th image... %s' % (i, img_path))
 
             valLoss = valLoss/dataset_val_size
-            message = '%s: %d %s: %.3f ' % ('epoch', epoch, 'Val_L1', valLoss)
+            valLossM = valLossM/dataset_val_size
+            message = "Epoch: %.4f, Val_L1: %.4f, Val_PSNR %.4f, Val_SSIM: %.4f, Val_Match: %.4f" % (epoch, L1_total/dataset_val_size, PSNR_total/dataset_val_size, SSIM_total/dataset_val_size, matching_total/dataset_val_size)
             with open(val_log_name, 'a') as val_log:
                 val_log.write('%s\n' % message)
 
