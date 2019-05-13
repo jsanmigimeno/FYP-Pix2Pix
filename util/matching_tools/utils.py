@@ -67,15 +67,16 @@ class HardNetDescriptor(object):
         assert os.path.isfile(checkpoint_path), \
             "Invalid file: {}".format(checkpoint_path)
         
-        # CPU/GPU
-        if len(self.gpu_ids) > 0:
-            assert(torch.cuda.is_available())
-            checkpoint = torch.load(checkpoint_path,
-                map_location=torch.device('cuda'))
-        else:
-            checkpoint = torch.load(checkpoint_path,
-                map_location=torch.device('cpu'))
-        self._model.load_state_dict(checkpoint['state_dict'], strict=True)
+        if checkpoint_path != '':
+            # CPU/GPU
+            if len(self.gpu_ids) > 0:
+                assert(torch.cuda.is_available())
+                checkpoint = torch.load(checkpoint_path,
+                    map_location=torch.device('cuda'))
+            else:
+                checkpoint = torch.load(checkpoint_path,
+                    map_location=torch.device('cpu'))
+            self._model.load_state_dict(checkpoint['state_dict'], strict=True)
 
     def compute(self, image, kpts, mask=None):
         """Compute the descriptors from given features.
@@ -178,6 +179,7 @@ def extract_patches_from_coords(image, kpts, patch_size=32):
 
     dim_y, dim_x = image.shape[0] // patch_size, image.shape[1] // patch_size
     patches = torch.Tensor(dim_y*dim_x, N, N).to(image.device)
+
     for i, kp in enumerate(kpts):
         patches[i] = image[kp[0]-N_half:kp[0]+N_half, kp[1]-N_half:kp[1]+N_half]
     return patches
