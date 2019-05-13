@@ -124,7 +124,7 @@ class Pix2PixModel(BaseModel):
         self.loss_G = self.loss_G_GAN + self.loss_G_L1
         # Third, descriptor loss
         if self.opt.lambda_desc != 0:
-            descriptorLoss, self.loss_G_matching = self.get_Descriptor_loss_and_matching(getMatching=True)
+            descriptorLoss, self.loss_G_Matching = self.get_Descriptor_loss_and_matching(getMatching=True)
             self.loss_G_Desc = descriptorLoss*self.opt.lambda_desc 
             self.loss_G = self.loss_G + self.loss_G_Desc
         
