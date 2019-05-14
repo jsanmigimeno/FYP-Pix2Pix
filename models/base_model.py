@@ -156,8 +156,7 @@ class BaseModel(ABC):
 
                 if not saveOptimizer:
                     torch.save({
-                        'model_state_dict': net.state_dict(),
-                        'optimizer_state_dict': opt.state_dict()
+                        'model_state_dict': net.state_dict()
                     }, save_path)
                 else:
                     torch.save({
