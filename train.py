@@ -130,7 +130,7 @@ if __name__ == '__main__':
 
         # Save losses to log
         message = 'Epoch: %i ' % epoch
-        for loss_name, loss_val in losses.items():
+        for loss_name, loss_val in epoch_losses.items():
             message += '%s: %.4f ' % (loss_name, loss_val/dataset_size)
         with open(train_log_name, 'a') as train_log:
             train_log.write('%s\n' % message)
