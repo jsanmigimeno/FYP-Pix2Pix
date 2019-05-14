@@ -79,6 +79,9 @@ if __name__ == '__main__':
             now = time.strftime("%c")
             log_file.write('================ Validation Loss (%s) ================\n' % now)
 
+        # Best epoch
+        bestEpochLoss = float('inf')
+
     for epoch in range(opt.epoch_count, opt.niter + opt.niter_decay + 1):    # outer loop for different epochs; we save the model by <epoch_count>, <epoch_count>+<save_latest_freq>
         epoch_start_time = time.time()  # timer for entire epoch
         iter_data_time = time.time()    # timer for data loading per iteration
@@ -89,6 +92,8 @@ if __name__ == '__main__':
         for name in model.loss_names:
             if isinstance(name, str):
                 epoch_losses[name] = 0
+        # Save total G loss of epoch
+        currentGLoss = 0
 
         for i, data in enumerate(dataset):  # inner loop within one epoch
             iter_start_time = time.time()  # timer for computation per iteration
@@ -109,6 +114,7 @@ if __name__ == '__main__':
             losses = model.get_current_losses()
             for name in losses:
                 epoch_losses[name] = epoch_losses[name] + losses[name]
+            currentGLoss += float(model.loss_G)
 
             if total_iters % opt.print_freq == 0:    # print training losses and save logging information to the disk
                 t_comp = (time.time() - iter_start_time) / opt.batch_size
@@ -123,10 +129,12 @@ if __name__ == '__main__':
 
             iter_data_time = time.time()
 
-        if epoch % opt.save_epoch_freq == 0:              # cache our model every <save_epoch_freq> epochs
+        
+        if epoch % opt.save_epoch_freq == 0 or currentGLoss < bestEpochLoss:              # cache our model every <save_epoch_freq> epochs or if current loss is the lowest
             print('saving the model at the end of epoch %d, iters %d' % (epoch, total_iters))
             model.save_networks('latest')
             model.save_networks(epoch)
+            bestEpochLoss = currentGLoss
 
         # Save losses to log
         message = 'Epoch: %i ' % epoch
