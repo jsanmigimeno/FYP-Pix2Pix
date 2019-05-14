@@ -26,6 +26,7 @@ from util.visualizer import Visualizer
 import copy
 import os
 from util import html
+from collections import OrderedDict
 
 if __name__ == '__main__':
     opt = TrainOptions().parse()   # get training options
@@ -65,8 +66,15 @@ if __name__ == '__main__':
         model_val.netD = model.netD
         model_val.netG = model.netG
         total_val_iters = 0
+        train_log_name = os.path.join(opt.checkpoints_dir, opt.name, 'train_loss_log.txt')
         val_log_name = os.path.join(opt_val.checkpoints_dir, opt_val.name, 'val_loss_log.txt')
         
+        # Training Log
+        with open(train_log_name, "a") as log_file:
+            now = time.strftime("%c")
+            log_file.write('================ Training Loss (%s) ================\n' % now)
+        
+        # Validation Log
         with open(val_log_name, "a") as log_file:
             now = time.strftime("%c")
             log_file.write('================ Validation Loss (%s) ================\n' % now)
@@ -75,6 +83,12 @@ if __name__ == '__main__':
         epoch_start_time = time.time()  # timer for entire epoch
         iter_data_time = time.time()    # timer for data loading per iteration
         epoch_iter = 0                  # the number of training iterations in current epoch, reset to 0 every epoch
+
+        # Initialise var where to save epoch losses
+        epoch_losses = OrderedDict()
+        for name in model.loss_names:
+            if isinstance(name, str):
+                epoch_losses[name] = 0
 
         for i, data in enumerate(dataset):  # inner loop within one epoch
             iter_start_time = time.time()  # timer for computation per iteration
@@ -91,8 +105,12 @@ if __name__ == '__main__':
                 model.compute_visuals()
                 visualizer.display_current_results(model.get_current_visuals(), epoch, save_result)
 
+            # Save iteration losses
+            losses = model.get_current_losses()
+            for name in losses:
+                epoch_losses[name] = epoch_losses[name] + losses[name]
+
             if total_iters % opt.print_freq == 0:    # print training losses and save logging information to the disk
-                losses = model.get_current_losses()
                 t_comp = (time.time() - iter_start_time) / opt.batch_size
                 visualizer.print_current_losses(epoch, epoch_iter, losses, t_comp, t_data)
                 if opt.display_id > 0:
@@ -104,11 +122,19 @@ if __name__ == '__main__':
                 model.save_networks(save_suffix)
 
             iter_data_time = time.time()
+
         if epoch % opt.save_epoch_freq == 0:              # cache our model every <save_epoch_freq> epochs
             print('saving the model at the end of epoch %d, iters %d' % (epoch, total_iters))
             model.save_networks('latest')
             model.save_networks(epoch)
-        
+
+        # Save losses to log
+        message = 'Epoch: %i ' % epoch
+        for loss_name, loss_val in losses.items():
+            message += '%s: %.4f ' % (loss_name, loss_val/dataset_size)
+        with open(train_log_name, 'a') as train_log:
+            train_log.write('%s\n' % message)
+
         # Validation
         if opt.use_validation:
             L1_total = 0
