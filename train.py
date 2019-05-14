@@ -160,7 +160,10 @@ if __name__ == '__main__':
         if epoch % opt.save_epoch_freq == 0 or (currentGValLoss < bestEpochValLoss and opt.use_validation):              # cache our model every <save_epoch_freq> epochs or if current loss is the lowest
             print('saving the model at the end of epoch %d, iters %d' % (epoch, total_iters))
             model.save_networks('latest')
-            model.save_networks(epoch)
+            if epoch % opt.save_opt_freq == 0:
+                model.save_networks(epoch, saveOptimizer=True)
+            else:
+                model.save_networks(epoch)
             bestEpochValLoss = currentGValLoss
 
         # Save losses to log

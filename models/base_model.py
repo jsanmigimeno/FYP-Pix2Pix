@@ -141,7 +141,7 @@ class BaseModel(ABC):
                 errors_ret[name] = float(getattr(self, 'loss_' + name))  # float(...) works for both scalar tensor and float number
         return errors_ret
 
-    def save_networks(self, epoch):
+    def save_networks(self, epoch, saveOptimizer=False):
         """Save all the networks to the disk.
 
         Parameters:
@@ -154,11 +154,17 @@ class BaseModel(ABC):
                 net = getattr(self, 'net' + name)
                 opt = getattr(self, 'optimizer_' + name)
 
-                torch.save({
-                    'model_state_dict': net.state_dict(),
-                    'optimizer_state_dict': opt.state_dict()
-                }, save_path)
-                
+                if not saveOptimizer:
+                    torch.save({
+                        'model_state_dict': net.state_dict(),
+                        'optimizer_state_dict': opt.state_dict()
+                    }, save_path)
+                else:
+                    torch.save({
+                        'model_state_dict': net.state_dict(),
+                        'optimizer_state_dict': opt.state_dict()
+                    }, save_path)
+
                 # if len(self.gpu_ids) > 0 and torch.cuda.is_available():
                 #     torch.save(net.module.cpu().state_dict(), save_path)
                 #     net.cuda(self.gpu_ids[0])
@@ -213,8 +219,10 @@ class BaseModel(ABC):
                 net.load_state_dict(state_dict)
                 
                 # load optimizer
-                opt_state_dict = checkpoint['optimizer_state_dict']
-                opt.load_state_dict(opt_state_dict)
+                if 'optimizer_state_dict' in checkpoint:
+                    print("Loading optimiser")
+                    opt_state_dict = checkpoint['optimizer_state_dict']
+                    opt.load_state_dict(opt_state_dict)
 
     def print_networks(self, verbose):
         """Print the total number of parameters in the network and (if verbose) network architecture
