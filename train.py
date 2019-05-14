@@ -56,7 +56,7 @@ if __name__ == '__main__':
         
         opt_val.ntest = float("inf")
         opt_val.results_dir='./val/'
-        opt_val.aspect_ratio =1.0
+        opt_val.aspect_ratio = 1.0
         opt_val.num_test = dataset_val_size
         opt_val.isTrain = False
         opt_val.load_size = opt_val.crop_size
@@ -80,7 +80,7 @@ if __name__ == '__main__':
             log_file.write('================ Validation Loss (%s) ================\n' % now)
 
         # Best epoch
-        bestEpochLoss = float('inf')
+        bestEpochValLoss = float('inf')
 
     for epoch in range(opt.epoch_count, opt.niter + opt.niter_decay + 1):    # outer loop for different epochs; we save the model by <epoch_count>, <epoch_count>+<save_latest_freq>
         epoch_start_time = time.time()  # timer for entire epoch
@@ -93,7 +93,7 @@ if __name__ == '__main__':
             if isinstance(name, str):
                 epoch_losses[name] = 0
         # Save total G loss of epoch
-        currentGLoss = 0
+        currentGValLoss = 0
 
         for i, data in enumerate(dataset):  # inner loop within one epoch
             iter_start_time = time.time()  # timer for computation per iteration
@@ -114,7 +114,6 @@ if __name__ == '__main__':
             losses = model.get_current_losses()
             for name in losses:
                 epoch_losses[name] = epoch_losses[name] + losses[name]
-            currentGLoss += float(model.loss_G)
 
             if total_iters % opt.print_freq == 0:    # print training losses and save logging information to the disk
                 t_comp = (time.time() - iter_start_time) / opt.batch_size
@@ -128,20 +127,6 @@ if __name__ == '__main__':
                 model.save_networks(save_suffix)
 
             iter_data_time = time.time()
-
-        
-        if epoch % opt.save_epoch_freq == 0 or currentGLoss < bestEpochLoss:              # cache our model every <save_epoch_freq> epochs or if current loss is the lowest
-            print('saving the model at the end of epoch %d, iters %d' % (epoch, total_iters))
-            model.save_networks('latest')
-            model.save_networks(epoch)
-            bestEpochLoss = currentGLoss
-
-        # Save losses to log
-        message = 'Epoch: %i ' % epoch
-        for loss_name, loss_val in epoch_losses.items():
-            message += '%s: %.4f ' % (loss_name, loss_val/dataset_size)
-        with open(train_log_name, 'a') as train_log:
-            train_log.write('%s\n' % message)
 
         # Validation
         if opt.use_validation:
@@ -170,6 +155,20 @@ if __name__ == '__main__':
             with open(val_log_name, 'a') as val_log:
                 val_log.write('%s\n' % message)
 
+            currentGValLoss = L1_total + descriptor_L1_total
+
+        if epoch % opt.save_epoch_freq == 0 or (currentGValLoss < bestEpochValLoss and opt.use_validation):              # cache our model every <save_epoch_freq> epochs or if current loss is the lowest
+            print('saving the model at the end of epoch %d, iters %d' % (epoch, total_iters))
+            model.save_networks('latest')
+            model.save_networks(epoch)
+            bestEpochValLoss = currentGValLoss
+
+        # Save losses to log
+        message = 'Epoch: %i ' % epoch
+        for loss_name, loss_val in epoch_losses.items():
+            message += '%s: %.4f ' % (loss_name, loss_val/dataset_size)
+        with open(train_log_name, 'a') as train_log:
+            train_log.write('%s\n' % message)
 
         print('End of epoch %d / %d \t Time Taken: %d sec' % (epoch, opt.niter + opt.niter_decay, time.time() - epoch_start_time))
         model.update_learning_rate()                     # update learning rates at the end of every epoch.
