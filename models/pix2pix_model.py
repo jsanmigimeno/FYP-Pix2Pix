@@ -38,7 +38,7 @@ class Pix2PixModel(BaseModel):
             parser.set_defaults(pool_size=0, gan_mode='vanilla')
             parser.add_argument('--lambda_L1', type=float, default=100.0, help='weight for L1 loss')
         parser.add_argument('--lambda_desc', type=float, default=0.0, help='weight for descriptor loss')
-        parser.add_argument('--disable_GAN_loss', type=bool, default=False, help='disable gan loss for debugging purposes')
+        parser.add_argument('--lambda_GAN', type=float, default=1, help='wheight for gan loss for debugging purposes')
 
         return parser
 
@@ -117,7 +117,7 @@ class Pix2PixModel(BaseModel):
         # First, G(A) should fake the discriminator
         fake_AB = torch.cat((self.real_A, self.fake_B), 1)
         pred_fake = self.netD(fake_AB)
-        self.loss_G_GAN = self.criterionGAN(pred_fake, True) * (not self.opt.disable_GAN_loss)
+        self.loss_G_GAN = self.criterionGAN(pred_fake, True) * (self.opt.lambda_GAN)
         # Second, G(A) = B
         self.loss_G_L1 = self.criterionL1(self.fake_B, self.real_B) * self.opt.lambda_L1
         # combine loss and calculate gradients
