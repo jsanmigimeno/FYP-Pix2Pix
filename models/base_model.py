@@ -195,7 +195,8 @@ class BaseModel(ABC):
                 load_filename = '%s_net_%s.pth' % (epoch, name)
                 load_path = os.path.join(self.save_dir, load_filename)
                 net = getattr(self, 'net' + name)
-                opt = getattr(self, 'optimizer_' + name)
+                if self.isTrain:
+                    opt = getattr(self, 'optimizer_' + name)
 
                 # if isinstance(net, torch.nn.DataParallel):
                 #     net = net.module
@@ -218,7 +219,7 @@ class BaseModel(ABC):
                 net.load_state_dict(state_dict)
                 
                 # load optimizer
-                if 'optimizer_state_dict' in checkpoint:
+                if 'optimizer_state_dict' in checkpoint and self.isTrain:
                     print("Loading optimiser")
                     opt_state_dict = checkpoint['optimizer_state_dict']
                     opt.load_state_dict(opt_state_dict)
