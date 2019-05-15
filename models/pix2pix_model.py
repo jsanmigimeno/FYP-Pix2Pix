@@ -39,6 +39,7 @@ class Pix2PixModel(BaseModel):
             parser.add_argument('--lambda_L1', type=float, default=100.0, help='weight for L1 loss')
         parser.add_argument('--lambda_desc', type=float, default=0.0, help='weight for descriptor loss')
         parser.add_argument('--lambda_GAN', type=float, default=1, help='wheight for gan loss for debugging purposes')
+        parser.add_argument('--siamese_descriptor', action='store_true', help='use siamese network for descriptor loss')
 
         return parser
 
@@ -98,6 +99,10 @@ class Pix2PixModel(BaseModel):
         """Run forward pass; called by both functions <optimize_parameters> and <test>."""
         self.fake_B = self.netG(self.real_A)  # G(A)
 
+    def forward_real(self):
+        """Run forward pass on ground truth image"""
+        self.fake_real_B = self.netG(self.real_B)
+
     def backward_D(self):
         """Calculate GAN loss for the discriminator"""
         # Fake; stop backprop to the generator by detaching fake_B
@@ -124,7 +129,11 @@ class Pix2PixModel(BaseModel):
         self.loss_G = self.loss_G_GAN + self.loss_G_L1
         # Third, descriptor loss
         if self.opt.lambda_desc != 0:
-            descriptorLoss, self.loss_G_Matching = self.get_Descriptor_loss_and_matching(getMatching=True)
+            if not self.opt.siamese_descriptor:
+                descriptorLoss, self.loss_G_Matching = self.get_Descriptor_loss_and_matching(getMatching=True)
+            else:
+                self.forward_real()
+                descriptorLoss, self.loss_G_Matching = self.get_Descriptor_loss_and_matching(getMatching=True, useFakeRealB=True)
             self.loss_G_Desc = descriptorLoss*self.opt.lambda_desc 
             self.loss_G = self.loss_G + self.loss_G_Desc
         
@@ -165,17 +174,25 @@ class Pix2PixModel(BaseModel):
         else:
             return ssimMeasure.item() 
 
-    def get_Descriptor_loss_and_matching(self, getMatching=False):
+    def get_Descriptor_loss_and_matching(self, getMatching=False, useFakeRealB=False):
         #Path to checkpoint
         checkpoint_path = self.opt.desc_weights_path
         # Convert to Grayscale
-        real_B = matching_utils.rgb2gray(self.real_B[0].permute(1, 2, 0))
-        fake_B = matching_utils.rgb2gray(self.fake_B[0].permute(1, 2, 0))
-        indexes = matching_utils.get_keypoints_coordinates(real_B)
+        if not useFakeRealB:
+            real_B = matching_utils.rgb2gray(self.real_B[0].permute(1, 2, 0))
+        else:
+            fake_real_B = matching_utils.rgb2gray(self.fake_real_B[0].permute(1, 2, 0))
 
-        desc_real_B = matching_utils.compute_desc(real_B, indexes, checkpoint_path=checkpoint_path, gpu_ids=self.gpu_ids)
+        fake_B = matching_utils.rgb2gray(self.fake_B[0].permute(1, 2, 0))
+        indexes = matching_utils.get_keypoints_coordinates(fake_B)
+
+        if not useFakeRealB:
+            desc_real_B = matching_utils.compute_desc(real_B, indexes, checkpoint_path=checkpoint_path, gpu_ids=self.gpu_ids)
+        else:
+            desc_real_B = matching_utils.compute_desc(fake_real_B, indexes, checkpoint_path=checkpoint_path, gpu_ids=self.gpu_ids)
+
         desc_fake_B = matching_utils.compute_desc(fake_B, indexes, checkpoint_path=checkpoint_path, gpu_ids=self.gpu_ids)
-        
+
         if getMatching:
             desc_real_B_N = desc_real_B.clone().cpu().detach().numpy()
             desc_fake_B_N = desc_fake_B.clone().cpu().detach().numpy()

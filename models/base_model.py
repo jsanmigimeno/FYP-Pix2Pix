@@ -141,7 +141,7 @@ class BaseModel(ABC):
                 errors_ret[name] = float(getattr(self, 'loss_' + name))  # float(...) works for both scalar tensor and float number
         return errors_ret
 
-    def save_networks(self, epoch):
+    def save_networks(self, epoch, saveOptimizer=False):
         """Save all the networks to the disk.
 
         Parameters:
@@ -152,12 +152,23 @@ class BaseModel(ABC):
                 save_filename = '%s_net_%s.pth' % (epoch, name)
                 save_path = os.path.join(self.save_dir, save_filename)
                 net = getattr(self, 'net' + name)
+                opt = getattr(self, 'optimizer_' + name)
 
-                if len(self.gpu_ids) > 0 and torch.cuda.is_available():
-                    torch.save(net.module.cpu().state_dict(), save_path)
-                    net.cuda(self.gpu_ids[0])
+                if not saveOptimizer:
+                    torch.save({
+                        'model_state_dict': net.state_dict()
+                    }, save_path)
                 else:
-                    torch.save(net.cpu().state_dict(), save_path)
+                    torch.save({
+                        'model_state_dict': net.state_dict(),
+                        'optimizer_state_dict': opt.state_dict()
+                    }, save_path)
+
+                # if len(self.gpu_ids) > 0 and torch.cuda.is_available():
+                #     torch.save(net.module.cpu().state_dict(), save_path)
+                #     net.cuda(self.gpu_ids[0])
+                # else:
+                #     torch.save(net.cpu().state_dict(), save_path)
 
     def __patch_instance_norm_state_dict(self, state_dict, module, keys, i=0):
         """Fix InstanceNorm checkpoints incompatibility (prior to 0.4)"""
@@ -184,19 +195,33 @@ class BaseModel(ABC):
                 load_filename = '%s_net_%s.pth' % (epoch, name)
                 load_path = os.path.join(self.save_dir, load_filename)
                 net = getattr(self, 'net' + name)
-                if isinstance(net, torch.nn.DataParallel):
-                    net = net.module
+                opt = getattr(self, 'optimizer_' + name)
+
+                # if isinstance(net, torch.nn.DataParallel):
+                #     net = net.module
+
                 print('loading the model from %s' % load_path)
                 # if you are using PyTorch newer than 0.4 (e.g., built from
                 # GitHub source), you can remove str() on self.device
-                state_dict = torch.load(load_path, map_location=str(self.device))
+                checkpoint = torch.load(load_path, map_location=str(self.device))
+
+                #state_dict = torch.load(load_path, map_location=str(self.device))
+                state_dict = checkpoint['model_state_dict']
+
                 if hasattr(state_dict, '_metadata'):
                     del state_dict._metadata
 
                 # patch InstanceNorm checkpoints prior to 0.4
                 for key in list(state_dict.keys()):  # need to copy keys here because we mutate in loop
                     self.__patch_instance_norm_state_dict(state_dict, net, key.split('.'))
+                
                 net.load_state_dict(state_dict)
+                
+                # load optimizer
+                if 'optimizer_state_dict' in checkpoint:
+                    print("Loading optimiser")
+                    opt_state_dict = checkpoint['optimizer_state_dict']
+                    opt.load_state_dict(opt_state_dict)
 
     def print_networks(self, verbose):
         """Print the total number of parameters in the network and (if verbose) network architecture
