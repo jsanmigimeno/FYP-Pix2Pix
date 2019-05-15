@@ -155,7 +155,7 @@ if __name__ == '__main__':
             with open(val_log_name, 'a') as val_log:
                 val_log.write('%s\n' % message)
 
-            currentGValLoss = L1_total + descriptor_L1_total
+            currentGValLoss = (L1_total + descriptor_L1_total).item()
 
         if epoch % opt.save_epoch_freq == 0 or (currentGValLoss < bestEpochValLoss and opt.use_validation):              # cache our model every <save_epoch_freq> epochs or if current loss is the lowest
             print('saving the model at the end of epoch %d, iters %d' % (epoch, total_iters))
