@@ -40,6 +40,7 @@ class Pix2PixModel(BaseModel):
         parser.add_argument('--lambda_desc', type=float, default=0.0, help='weight for descriptor loss')
         parser.add_argument('--lambda_GAN', type=float, default=1, help='wheight for gan loss for debugging purposes')
         parser.add_argument('--siamese_descriptor', action='store_true', help='use siamese network for descriptor loss')
+        parser.add_argument('--per_channel_descriptor', action='store_true', help='compute descriptor for each RGB channel')
 
         return parser
 
@@ -177,34 +178,57 @@ class Pix2PixModel(BaseModel):
     def get_Descriptor_loss_and_matching(self, getMatching=False, useFakeRealB=False):
         #Path to checkpoint
         checkpoint_path = self.opt.desc_weights_path
+
         # Convert to Grayscale
-        if not useFakeRealB:
-            real_B = matching_utils.rgb2gray(self.real_B[0].permute(1, 2, 0))
+        if not self.opt.per_channel_descriptor:
+            if not useFakeRealB:
+                real_B = matching_utils.rgb2gray(self.real_B[0].permute(1, 2, 0)).unsqueeze(2)
+            else:
+                fake_real_B = matching_utils.rgb2gray(self.fake_real_B[0].permute(1, 2, 0)).unsqueeze(2)
+            fake_B = matching_utils.rgb2gray(self.fake_B[0].permute(1, 2, 0)).unsqueeze(2)
         else:
-            fake_real_B = matching_utils.rgb2gray(self.fake_real_B[0].permute(1, 2, 0))
+            if not useFakeRealB:
+                real_B = self.real_B[0].permute(1, 2, 0)
+            else:
+                fake_real_B = self.fake_real_B[0].permute(1, 2, 0)
+            fake_B = self.fake_B[0].permute(1, 2, 0)
 
-        fake_B = matching_utils.rgb2gray(self.fake_B[0].permute(1, 2, 0))
-        indexes = matching_utils.get_keypoints_coordinates(fake_B)
+        
+        indexes = matching_utils.get_keypoints_coordinates(fake_B[...,0])
 
-        if not useFakeRealB:
-            desc_real_B = matching_utils.compute_desc(real_B, indexes, checkpoint_path=checkpoint_path, gpu_ids=self.gpu_ids)
-        else:
-            desc_real_B = matching_utils.compute_desc(fake_real_B, indexes, checkpoint_path=checkpoint_path, gpu_ids=self.gpu_ids)
+        nChannels = fake_B.shape[2]
 
-        desc_fake_B = matching_utils.compute_desc(fake_B, indexes, checkpoint_path=checkpoint_path, gpu_ids=self.gpu_ids)
+        L1Loss = torch.tensor(0).to(fake_B.device)
+        matching_score = 0
+
+        for channel in range(nChannels):
+
+            if not useFakeRealB:
+                real_B_T = real_B[..., channel]
+                desc_real_B = matching_utils.compute_desc(real_B_T, indexes, checkpoint_path=checkpoint_path, gpu_ids=self.gpu_ids)
+            else:
+                fake_real_B_T = fake_real_B[..., channel]
+                desc_real_B = matching_utils.compute_desc(fake_real_B_T, indexes, checkpoint_path=checkpoint_path, gpu_ids=self.gpu_ids)
+
+            fake_B_T = fake_B[..., channel]
+            desc_fake_B = matching_utils.compute_desc(fake_B_T, indexes, checkpoint_path=checkpoint_path, gpu_ids=self.gpu_ids)
+
+            if getMatching:
+                desc_real_B_N = desc_real_B.clone().cpu().detach().numpy()
+                desc_fake_B_N = desc_fake_B.clone().cpu().detach().numpy()
+
+                # match descriptors
+                matches = matching_utils.match(desc_real_B_N, desc_fake_B_N)
+                matches_np = matching_utils.convert_opencv_matches_to_numpy(matches)
+                true_matches = np.where(matches_np[:, 0] == matches_np[:, 1], 1., 0.)
+                matching_score += np.sum(true_matches) / len(true_matches)
+
+            L1Loss = L1Loss + self.criterionL1(desc_real_B, desc_fake_B)
 
         if getMatching:
-            desc_real_B_N = desc_real_B.clone().cpu().detach().numpy()
-            desc_fake_B_N = desc_fake_B.clone().cpu().detach().numpy()
-
-            # match descriptors
-            matches = matching_utils.match(desc_real_B_N, desc_fake_B_N)
-            matches_np = matching_utils.convert_opencv_matches_to_numpy(matches)
-            true_matches = np.where(matches_np[:, 0] == matches_np[:, 1], 1., 0.)
-            matching_score = np.sum(true_matches) / len(true_matches)
-            return self.criterionL1(desc_real_B, desc_fake_B), matching_score
+            return L1Loss/nChannels, matching_score/nChannels
         else:
-            return self.criterionL1(desc_real_B, desc_fake_B)
+            return L1Loss/nChannels
 
     def get_Matching(self):
         #Path to checkpoint
