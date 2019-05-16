@@ -2,6 +2,7 @@ import os
 from matplotlib import pyplot as plt
 from matplotlib import image
 import cv2
+from random import randint
 
 manDataDir = "C:\\CodingSSD\\FYP-General\\SID_Dataset\\Downscaled_JPEG\\All\\Combined\\baselineTestMeanAdjust"
 runsDir = "E:\\FYP"
@@ -14,7 +15,20 @@ runNames = {
     'DSSiamese': 172
 }
 
-imgId = '10003_00_0.1s'
+#imgId = '10003_00_0.1s'
+imgId = ''
+
+if imgId == '':
+    files = os.listdir(manDataDir)
+    nImages = len(files)
+    isFile = False
+    while not isFile:
+        idx = randint(0, nImages)
+        f = files[idx]
+        isFile = os.path.isfile(os.path.join(manDataDir, f))
+    
+    imgId = os.path.splitext(f)[0]
+    print("Image id: %s" % imgId)
 
 nImages = len(runNames) + 2
 
@@ -42,7 +56,7 @@ for name, epoch in runNames.items():
     axs[axIdx].axis('off')
     axs[axIdx].title.set_text(name)
     axIdx += 1
-    
+
 plt.axis('scaled')
 plt.subplots_adjust(left=0.005, right=0.995, top=0.85, bottom=0.02)
 plt.show()
