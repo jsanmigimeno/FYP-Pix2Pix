@@ -105,10 +105,10 @@ def cleanDF(data, colName):
                 except:
                     continue
         
-        return data
+    return data
 
 
-def parseLogVal(filePath, version='auto', cleanData=True, plot=False, fileURL=None, downloadFile=False):
+def parseLogVal(filePath, version='auto', cleanData=True, plot=False, fileURL=None, downloadFile=False, printMin=False):
     if downloadFile:
         dgd(fileURL, filePath)
 
@@ -122,6 +122,11 @@ def parseLogVal(filePath, version='auto', cleanData=True, plot=False, fileURL=No
         data = cleanDF(data, 'epoch')
         data = data.apply(pd.to_numeric)
 
+    netLoss = data['L1'] + data['Desc']
+    if printMin:
+        minIdx = np.argmin(netLoss.values)
+        print("Minimum at %i, %.4f (L1 + Desc)" % (minIdx, netLoss.values[minIdx]))
+
     if plot:
         plt.rcParams["font.family"] = "Times New Roman"
         fig, ax = plt.subplots()
@@ -129,7 +134,7 @@ def parseLogVal(filePath, version='auto', cleanData=True, plot=False, fileURL=No
         plotNames = useCols[1:]
         for name in plotNames:
             ax.plot(data[name].values, label=name)
-        ax.plot((data['L1'] + data['Desc']).values, label='L1 + Desc')
+        ax.plot(netLoss.values, label='L1 + Desc')
         ax.legend()
         plt.show()
     return data
@@ -166,13 +171,19 @@ def parseLogVal(filePath, version='auto', cleanData=True, plot=False, fileURL=No
 #valD = parseLogVal("C:\\Users\\Work\\Downloads\\val_loss_log (8).txt", plot=True)
 
 # Baseline - Only GAN
-#valD = parseLogVal("./temp_logs/OnlyGAN.txt", plot=True, fileURL='https://drive.google.com/open?id=1-VNBmXsLBICbIKS0qulHtkpjfd7u9L_4', downloadFile=True)
+#valD = parseLogVal("./temp_logs/OnlyGAN.txt", plot=True, fileURL='https://drive.google.com/open?id=1-VNBmXsLBICbIKS0qulHtkpjfd7u9L_4', downloadFile=False, printMin=True)
 
 # Baseline - Only L1
-valD = parseLogVal("./temp_logs/OnlyL1.txt", plot=True, fileURL='https://drive.google.com/open?id=1-ZQVhkaWqQs_n6E6enRK-3ZLIx611RPP', downloadFile=True)
+#valD = parseLogVal("./temp_logs/OnlyL1.txt", plot=True, fileURL='https://drive.google.com/open?id=1-ZQVhkaWqQs_n6E6enRK-3ZLIx611RPP', downloadFile=False, printMin=True)
 
 # Descriptor Loss - lambda 150
-#valD = parseLogVal("./temp_logs/Desc150.txt", plot=True, fileURL='https://drive.google.com/open?id=1-S2wtRwWO5W8vKvq81SiwakMeC8ElfY_', downloadFile=True)
+# valD = parseLogVal("./temp_logs/Desc150.txt", plot=True, fileURL='https://drive.google.com/open?id=1-S2wtRwWO5W8vKvq81SiwakMeC8ElfY_', downloadFile=True, printMin=True)
 
 # Siamese Loss - desc lambda 100
-#valD = parseLogVal("./temp_logs/Siamese100.txt", plot=True, fileURL='https://drive.google.com/open?id=1MWm-EExerW6Gc-CgtViBgivrYg9hnBJM', downloadFile=False)
+valD = parseLogVal("./temp_logs/Siamese100.txt", plot=True, fileURL='https://drive.google.com/open?id=1MWm-EExerW6Gc-CgtViBgivrYg9hnBJM', downloadFile=False, printMin=True)
+
+# Baseline
+#valD = parseLogVal("./temp_logs/Baseline.txt", plot=True, fileURL='https://drive.google.com/open?id=10km2K9Tk-yRn6QLD5PBaWfyklpIG6f3p', downloadFile=True, printMin=True)
+
+# Descriptor Loss - lambda 100
+#valD = parseLogVal("./temp_logs/Desc100.txt", plot=True, fileURL='https://drive.google.com/open?id=13SsTOzddTRRVoZTteec5IGAqkG71Fkd_', downloadFile=True, printMin=True)
