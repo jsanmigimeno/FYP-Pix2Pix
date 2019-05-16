@@ -1,8 +1,7 @@
 import requests
 
 def download_from_gd(shareableLink, destination):
-    strtidx = shareableLink.find('id=') + 3
-    id = shareableLink[strtidx:]
+    id = parseURL(shareableLink)
 
     URL = "https://docs.google.com/uc?export=download"
 
@@ -31,3 +30,7 @@ def save_response_content(response, destination):
         for chunk in response.iter_content(CHUNK_SIZE):
             if chunk: # filter out keep-alive new chunks
                 f.write(chunk)
+
+def parseURL(URL):
+    strtidx = URL.find('id=') + 3
+    return URL[strtidx:]
