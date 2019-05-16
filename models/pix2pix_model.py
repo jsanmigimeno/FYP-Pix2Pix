@@ -5,6 +5,8 @@ from math import log10
 from util import ssim
 import numpy as np
 from util.matching_tools import utils as matching_utils
+import pickle
+import pdb
 
 class Pix2PixModel(BaseModel):
     """ This class implements the pix2pix model, for learning a mapping from input images to output images given paired data.
@@ -218,10 +220,15 @@ class Pix2PixModel(BaseModel):
                 desc_fake_B_N = desc_fake_B.clone().cpu().detach().numpy()
 
                 # match descriptors
-                matches = matching_utils.match(desc_real_B_N, desc_fake_B_N)
-                matches_np = matching_utils.convert_opencv_matches_to_numpy(matches)
-                true_matches = np.where(matches_np[:, 0] == matches_np[:, 1], 1., 0.)
-                matching_score += np.sum(true_matches) / len(true_matches)
+                try:
+                    matches = matching_utils.match(desc_real_B_N, desc_fake_B_N)
+                    matches_np = matching_utils.convert_opencv_matches_to_numpy(matches)
+                    true_matches = np.where(matches_np[:, 0] == matches_np[:, 1], 1., 0.)
+                    matching_score += np.sum(true_matches) / len(true_matches)
+                except:
+                    pdb.set_trace()
+                    with open('error.pkl', 'wb') as f:
+                        pickle.dump([desc_real_B_N, desc_fake_B_N, matches_np], f)
 
             L1Loss = L1Loss + self.criterionL1(desc_real_B, desc_fake_B)
 
