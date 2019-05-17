@@ -205,8 +205,9 @@ def extract_patches_from_coords(image, kpts, patch_size=32):
     N = patch_size
     N_half = N // 2
 
-    dim_y, dim_x = image.shape[0] // patch_size, image.shape[1] // patch_size
-    patches = torch.Tensor(dim_y*dim_x, N, N).to(image.device)
+    #dim_y, dim_x = image.shape[0] // patch_size, image.shape[1] // patch_size
+    nPathes = len(kpts)
+    patches = torch.Tensor(nPathes, N, N).to(image.device)
 
     for i, kp in enumerate(kpts):
         patches[i] = image[kp[0]-N_half:kp[0]+N_half, kp[1]-N_half:kp[1]+N_half]
