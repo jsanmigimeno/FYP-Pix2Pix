@@ -120,16 +120,23 @@ def convert_opencv_matches_to_numpy(matches):
     return np.asarray(correspondences)
 
 
-def get_keypoints_coordinates(img, patch_size=32, use_detector=False):
+def get_keypoints_coordinates(img, patch_size=32, use_detector=False, num_points=75, detector=None):
 
     if use_detector:
-        # TODO: Include a Keypoint detector to extract feature coordinates
-        print('Implement a Keypoint Detector')
-        coordinates = []
+        if img.cpu().numpy().min() < 0.0:
+            img = img.cpu().numpy()-img.cpu().numpy().min()
+        img = np.asarray(255 * (img / img.max()), np.uint8)
+        if not detector:
+            # FAST as the default detector
+            detector = cv2.FastFeatureDetector_create()
+        openCV_kps = detector.detect(img, None)
+        openCV_kps.sort(key=lambda x: x.response, reverse=True)
+        coordinates = [[int(kp.pt[1]), int(kp.pt[0])] for kp in openCV_kps[:num_points]]
+
     else:
+        coordinates = []
         # Define a grid where to extract patches
         dim_y, dim_x = img.shape[0] // patch_size, img.shape[1] // patch_size
-        coordinates = []
         for y in range(dim_y):
             for x in range(dim_x):
                 point = [int((y+0.5)*patch_size), int((x+0.5)*patch_size)]

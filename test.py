@@ -33,9 +33,14 @@ from models import create_model
 from util.visualizer import save_images
 from util import html
 import torch
+import numpy as np
 
 
 if __name__ == '__main__':
+
+    torch.manual_seed(1234)
+    np.random.seed(1234)
+    
     opt = TestOptions().parse()  # get test options
     # hard-code some parameters for test
     opt.num_threads = 0   # test code only supports num_threads = 1
@@ -90,3 +95,6 @@ if __name__ == '__main__':
     webpage.add_header("Overall performance")
     webpage.add_text(("L1: %.4f, PSNR %.4f, SSIM: %.4f, descriptor L1: %.4f, matching score: %.4f" % (L1_total/test_size, PSNR_total/test_size, SSIM_total/test_size, descriptor_L1_total/test_size, matching_total/test_size)))    
     webpage.save()  # save the HTML
+
+    print("L1: %.4f, PSNR %.4f, SSIM: %.4f, matching score: %.4f" % (
+    L1_total / test_size, PSNR_total / test_size, SSIM_total / test_size, matching_total / test_size))
