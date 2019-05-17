@@ -42,6 +42,7 @@ class Pix2PixModel(BaseModel):
         parser.add_argument('--siamese_descriptor', action='store_true', help='use siamese network for descriptor loss')
         parser.add_argument('--per_channel_descriptor', action='store_true', help='compute descriptor for each RGB channel')
         parser.add_argument('--use_detector', action='store_true', help='use detector when extracting patches')
+        parser.add_argument('--descriptor', type=str, default='HardNet', help='descriptor to be used for loss computation: HardNet|SIFT')
 
         return parser
 
@@ -132,10 +133,10 @@ class Pix2PixModel(BaseModel):
         # Third, descriptor loss
         if self.opt.lambda_desc != 0:
             if not self.opt.siamese_descriptor:
-                descriptorLoss, self.loss_G_Matching = self.get_Descriptor_loss_and_matching(getMatching=True, useDetector=self.opt.use_detector)
+                descriptorLoss, self.loss_G_Matching = self.get_Descriptor_loss_and_matching(getMatching=True, useDetector=self.opt.use_detector, descType=self.opt.descriptor)
             else:
                 self.forward_real()
-                descriptorLoss, self.loss_G_Matching = self.get_Descriptor_loss_and_matching(getMatching=True, useFakeRealB=True, useDetector=self.opt.use_detector)
+                descriptorLoss, self.loss_G_Matching = self.get_Descriptor_loss_and_matching(getMatching=True, useFakeRealB=True, useDetector=self.opt.use_detector, descType=self.opt.descriptor)
             self.loss_G_Desc = descriptorLoss*self.opt.lambda_desc 
             self.loss_G = self.loss_G + self.loss_G_Desc
         
@@ -176,7 +177,7 @@ class Pix2PixModel(BaseModel):
         else:
             return ssimMeasure.item() 
 
-    def get_Descriptor_loss_and_matching(self, getMatching=False, useFakeRealB=False, useDetector=False):
+    def get_Descriptor_loss_and_matching(self, getMatching=False, useFakeRealB=False, useDetector=False, descType='HardNet'):
         #Path to checkpoint
         checkpoint_path = self.opt.desc_weights_path
 
@@ -205,13 +206,13 @@ class Pix2PixModel(BaseModel):
 
             if not useFakeRealB:
                 real_B_T = real_B[..., channel]
-                desc_real_B = matching_utils.compute_desc(real_B_T, indexes, checkpoint_path=checkpoint_path, gpu_ids=self.gpu_ids)
+                desc_real_B = matching_utils.compute_desc(real_B_T, indexes, descType=descType, checkpoint_path=checkpoint_path, gpu_ids=self.gpu_ids)
             else:
                 fake_real_B_T = fake_real_B[..., channel]
-                desc_real_B = matching_utils.compute_desc(fake_real_B_T, indexes, checkpoint_path=checkpoint_path, gpu_ids=self.gpu_ids)
+                desc_real_B = matching_utils.compute_desc(fake_real_B_T, indexes, descType=descType, checkpoint_path=checkpoint_path, gpu_ids=self.gpu_ids)
 
             fake_B_T = fake_B[..., channel]
-            desc_fake_B = matching_utils.compute_desc(fake_B_T, indexes, checkpoint_path=checkpoint_path, gpu_ids=self.gpu_ids)
+            desc_fake_B = matching_utils.compute_desc(fake_B_T, indexes, descType=descType, checkpoint_path=checkpoint_path, gpu_ids=self.gpu_ids)
 
             if getMatching:
                 desc_real_B_N = desc_real_B.clone().cpu().detach().numpy()
@@ -231,7 +232,7 @@ class Pix2PixModel(BaseModel):
         else:
             return L1Loss/nChannels
 
-    def get_Matching(self, useDetector=False):
+    def get_Matching(self, useDetector=False, descType='HardNet'):
         #Path to checkpoint
         checkpoint_path = self.opt.desc_weights_path
         # Convert to Grayscale
@@ -239,8 +240,8 @@ class Pix2PixModel(BaseModel):
         fake_B = matching_utils.rgb2gray(self.fake_B[0].permute(1, 2, 0))
         indexes = matching_utils.get_keypoints_coordinates(real_B, use_detector=useDetector)
 
-        desc_real_B = matching_utils.compute_desc(real_B, indexes, checkpoint_path=checkpoint_path, gpu_ids=self.gpu_ids)
-        desc_fake_B = matching_utils.compute_desc(fake_B, indexes, checkpoint_path=checkpoint_path, gpu_ids=self.gpu_ids)
+        desc_real_B = matching_utils.compute_desc(real_B, indexes, descType=descType, checkpoint_path=checkpoint_path, gpu_ids=self.gpu_ids)
+        desc_fake_B = matching_utils.compute_desc(fake_B, indexes, descType=descType, checkpoint_path=checkpoint_path, gpu_ids=self.gpu_ids)
 
         desc_real_B = desc_real_B.cpu().numpy()
         desc_fake_B = desc_fake_B.cpu().detach().numpy()

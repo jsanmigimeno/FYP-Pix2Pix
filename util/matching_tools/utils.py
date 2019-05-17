@@ -4,6 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 import cv2
+from .pytorch_sift import SIFTNet
 
 class HardNet(nn.Module):
     """HardNet model definition
@@ -94,6 +95,25 @@ class HardNetDescriptor(object):
         descs = self._model(patches)
         return kpts, descs
 
+class SIFTDescriptor():
+    def __init__(self, patch_size=32, gpu_ids=[]):
+        self.patch_size = patch_size
+        self.gpu_ids = gpu_ids
+
+        self.SIFT = SIFTNet(patch_size=patch_size)
+
+        # CPU/GPU
+        if len(gpu_ids) > 0:
+            assert(torch.cuda.is_available())
+            self.SIFT.to(gpu_ids[0])
+
+    def compute(self, image, kpts, mask=None):
+        patches = extract_patches_from_coords(image, kpts)
+        patches = torch.unsqueeze(patches, dim=1)
+        patches = patches.float() / 255.
+        # inference model with patches
+        descs = self.SIFT(patches)
+        return kpts, descs
 
 def match(descs1, descs2):
      """Compute brute force matches between two sets of descriptors.
@@ -192,11 +212,16 @@ def extract_patches_from_coords(image, kpts, patch_size=32):
         patches[i] = image[kp[0]-N_half:kp[0]+N_half, kp[1]-N_half:kp[1]+N_half]
     return patches
 
-def compute_desc(img, points, checkpoint_path, gpu_ids=[]):
+def compute_desc(img, points, descType, checkpoint_path, gpu_ids=[]):
 
     #kpts = convert_numpy_features_to_opencv_keypoints(points)
     kpts = points 
 
-    descriptor = HardNetDescriptor(checkpoint_path, gpu_ids=gpu_ids)
+    if descType == 'HardNet':
+        descriptor = HardNetDescriptor(checkpoint_path, gpu_ids=gpu_ids)
+    elif descType == 'SIFT':
+        descriptor = SIFTDescriptor(gpu_ids=gpu_ids)
+    else:
+        raise Exception('Descriptor %s not implemented' % descType)
     _, descs = descriptor.compute(img, kpts, None)
     return descs
