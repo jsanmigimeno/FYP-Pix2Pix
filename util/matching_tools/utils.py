@@ -123,13 +123,14 @@ def convert_opencv_matches_to_numpy(matches):
 def get_keypoints_coordinates(img, patch_size=32, use_detector=False, num_points=75, detector=None):
 
     if use_detector:
-        if img.cpu().numpy().min() < 0.0:
-            img = img.cpu().numpy()-img.cpu().numpy().min()
-        img = np.asarray(255 * (img / img.max()), np.uint8)
+        img_local = img.clone().cpu().numpy()
+        if img_local.min() < 0.0:
+            img_local = img_local-img_local.min()
+        img_local = np.asarray(255 * (img_local / img_local.max()), np.uint8)
         if not detector:
             # FAST as the default detector
             detector = cv2.FastFeatureDetector_create()
-        openCV_kps = detector.detect(img, None)
+        openCV_kps = detector.detect(img_local, None)
         openCV_kps.sort(key=lambda x: x.response, reverse=True)
         coordinates = [[int(kp.pt[1]), int(kp.pt[0])] for kp in openCV_kps[:num_points]]
 

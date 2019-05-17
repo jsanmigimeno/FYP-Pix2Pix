@@ -41,6 +41,7 @@ class Pix2PixModel(BaseModel):
         parser.add_argument('--lambda_GAN', type=float, default=1, help='wheight for gan loss for debugging purposes')
         parser.add_argument('--siamese_descriptor', action='store_true', help='use siamese network for descriptor loss')
         parser.add_argument('--per_channel_descriptor', action='store_true', help='compute descriptor for each RGB channel')
+        parser.add_argument('--use_detector', action='store_true', help='use detector when extracting patches')
 
         return parser
 
@@ -131,10 +132,10 @@ class Pix2PixModel(BaseModel):
         # Third, descriptor loss
         if self.opt.lambda_desc != 0:
             if not self.opt.siamese_descriptor:
-                descriptorLoss, self.loss_G_Matching = self.get_Descriptor_loss_and_matching(getMatching=True)
+                descriptorLoss, self.loss_G_Matching = self.get_Descriptor_loss_and_matching(getMatching=True, useDetector=self.opt.use_detector)
             else:
                 self.forward_real()
-                descriptorLoss, self.loss_G_Matching = self.get_Descriptor_loss_and_matching(getMatching=True, useFakeRealB=True)
+                descriptorLoss, self.loss_G_Matching = self.get_Descriptor_loss_and_matching(getMatching=True, useFakeRealB=True, useDetector=self.opt.use_detector)
             self.loss_G_Desc = descriptorLoss*self.opt.lambda_desc 
             self.loss_G = self.loss_G + self.loss_G_Desc
         
@@ -175,7 +176,7 @@ class Pix2PixModel(BaseModel):
         else:
             return ssimMeasure.item() 
 
-    def get_Descriptor_loss_and_matching(self, getMatching=False, useFakeRealB=False):
+    def get_Descriptor_loss_and_matching(self, getMatching=False, useFakeRealB=False, useDetector=False):
         #Path to checkpoint
         checkpoint_path = self.opt.desc_weights_path
 
@@ -193,7 +194,7 @@ class Pix2PixModel(BaseModel):
                 fake_real_B = self.fake_real_B[0].permute(1, 2, 0)
             fake_B = self.fake_B[0].permute(1, 2, 0)
 
-        indexes = matching_utils.get_keypoints_coordinates(real_B[..., 0], use_detector=True)
+        indexes = matching_utils.get_keypoints_coordinates(real_B[..., 0], use_detector=useDetector)
 
         nChannels = fake_B.shape[2]
 
@@ -230,13 +231,13 @@ class Pix2PixModel(BaseModel):
         else:
             return L1Loss/nChannels
 
-    def get_Matching(self):
+    def get_Matching(self, useDetector=False):
         #Path to checkpoint
         checkpoint_path = self.opt.desc_weights_path
         # Convert to Grayscale
         real_B = matching_utils.rgb2gray(self.real_B[0].permute(1, 2, 0))
         fake_B = matching_utils.rgb2gray(self.fake_B[0].permute(1, 2, 0))
-        indexes = matching_utils.get_keypoints_coordinates(real_B, use_detector=True)
+        indexes = matching_utils.get_keypoints_coordinates(real_B, use_detector=useDetector)
 
         desc_real_B = matching_utils.compute_desc(real_B, indexes, checkpoint_path=checkpoint_path, gpu_ids=self.gpu_ids)
         desc_fake_B = matching_utils.compute_desc(fake_B, indexes, checkpoint_path=checkpoint_path, gpu_ids=self.gpu_ids)
