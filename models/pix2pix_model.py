@@ -195,7 +195,10 @@ class Pix2PixModel(BaseModel):
                 fake_real_B = self.fake_real_B[0].permute(1, 2, 0)
             fake_B = self.fake_B[0].permute(1, 2, 0)
 
-        indexes = matching_utils.get_keypoints_coordinates(real_B[..., 0], use_detector=useDetector)
+        if not useFakeRealB:
+            indexes = matching_utils.get_keypoints_coordinates(real_B[..., 0], use_detector=useDetector)
+        else:
+            indexes = matching_utils.get_keypoints_coordinates(fake_real_B[..., 0], use_detector=useDetector)
 
         nChannels = fake_B.shape[2]
 
