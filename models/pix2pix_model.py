@@ -220,8 +220,9 @@ class Pix2PixModel(BaseModel):
                 # match descriptors
                 matches = matching_utils.match(desc_real_B_N, desc_fake_B_N)
                 matches_np = matching_utils.convert_opencv_matches_to_numpy(matches)
-                true_matches = np.where(matches_np[:, 0] == matches_np[:, 1], 1., 0.)
-                matching_score += np.sum(true_matches) / len(true_matches)
+                if len(matches_np) != 0:
+                    true_matches = np.where(matches_np[:, 0] == matches_np[:, 1], 1., 0.)
+                    matching_score += np.sum(true_matches) / len(true_matches)
 
             L1Loss = L1Loss + self.criterionL1(desc_real_B, desc_fake_B)
 
