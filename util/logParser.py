@@ -49,12 +49,33 @@ def parseLog(filePath, version='auto', plot=False):
         plt.show()
     return data
 
-def parseLogTrain(filePath, plot=False):
-    # Column names of log file
-    colNames = ["epochT", "epoch", "G_GANT", "G_GAN", "G_L1T", "G_L1", "G_DescT", "G_Desc", "G_MatchT", "G_Match", "D_realT", "D_real", "D_fakeT", "D_fake"]
-    useCols = ['epoch', 'G_GAN', 'G_L1', 'G_Desc', 'D_real', 'D_fake']
-    # Import data
-    data = pd.read_csv(filePath, sep=" ", header=None, names=colNames, usecols=useCols, skiprows=1, index_col=False)
+def parseLogTrain(filePath, cleanData=True, plot=False, fileURL=None, downloadFile=False, printEpoch=None):
+    if downloadFile:
+        dgd(fileURL, filePath)
+
+    try:
+        # Column names of log file
+        colNames = ["epochT", "epoch", "G_GANT", "G_GAN", "G_L1T", "G_L1", "G_DescT", "G_Desc", "G_MatchT", "G_Match", "D_realT", "D_real", "D_fakeT", "D_fake"]
+        useCols = ['epoch', 'G_GAN', 'G_L1', 'G_Desc', 'G_Match', 'D_real', 'D_fake']
+        # Import data
+        data = pd.read_csv(filePath, sep=" ", header=None, names=colNames, usecols=useCols, skiprows=1, index_col=False)
+    except:
+        # Column names of log file
+        colNames = ["epochT", "epoch", "G_GANT", "G_GAN", "G_L1T", "G_L1", "D_realT", "D_real", "D_fakeT", "D_fake"]
+        useCols = ['epoch', 'G_GAN', 'G_L1', 'D_real', 'D_fake']
+        # Import data
+        data = pd.read_csv(filePath, sep=" ", header=None, names=colNames, usecols=useCols, skiprows=1, index_col=False)
+
+    if cleanData:
+        data = cleanDF(data, 'epoch')
+        data = data.apply(pd.to_numeric)
+
+    if printEpoch is not None:
+        message = "Epoch %i: " %printEpoch
+        printNames = useCols[1:]
+        for name in printNames:
+            message += "%s: %.4f " % (name, data[name][printEpoch-1])
+        print(message)
 
     if plot:
         plt.rcParams["font.family"] = "Times New Roman"
@@ -108,13 +129,13 @@ def cleanDF(data, colName):
     return data
 
 
-def parseLogVal(filePath, version='auto', cleanData=True, plot=False, fileURL=None, downloadFile=False, printMin=False):
+def parseLogVal(filePath, version='auto', cleanData=True, plot=False, fileURL=None, downloadFile=False, printMin=False, printEpoch='Min'):
     if downloadFile:
         dgd(fileURL, filePath)
 
     # Column names of log file
     colNames = ["epochT", "epoch", "L1T", "L1", "PSNRT", "PSNR", "SSIMT", "SSIM", "DescT", "Desc", "MatchT", "Match"]
-    useCols = ["epoch", "L1", "Desc", "Match"]
+    useCols = ["epoch", "L1", "PSNR", "SSIM", "Desc", "Match"]
     # Import data
     data = pd.read_csv(filePath, sep=" ", header=None, names=colNames, usecols=useCols, skiprows=1, index_col=False, error_bad_lines=False)
     
@@ -126,6 +147,16 @@ def parseLogVal(filePath, version='auto', cleanData=True, plot=False, fileURL=No
     if printMin:
         minIdx = np.argmin(netLoss.values)
         print("Minimum at %i, %.4f (L1 + Desc)" % (minIdx, netLoss.values[minIdx]))
+
+    if printEpoch is not None:
+        if printEpoch == 'Min':
+            printEpoch = minIdx + 1
+
+        message = "Epoch %i: " %printEpoch
+        printNames = useCols[1:]
+        for name in printNames:
+            message += "%s: %.4f " % (name, data[name][printEpoch-1])
+        print(message)
 
     if plot:
         plt.rcParams["font.family"] = "Times New Roman"
@@ -171,19 +202,34 @@ def parseLogVal(filePath, version='auto', cleanData=True, plot=False, fileURL=No
 #valD = parseLogVal("C:\\Users\\Work\\Downloads\\val_loss_log (8).txt", plot=True)
 
 # Baseline - Only GAN
-#valD = parseLogVal("./temp_logs/OnlyGAN.txt", plot=True, fileURL='https://drive.google.com/open?id=1-VNBmXsLBICbIKS0qulHtkpjfd7u9L_4', downloadFile=False, printMin=True)
+# valD = parseLogVal("./temp_logs/OnlyGAN.txt", plot=False, fileURL='https://drive.google.com/open?id=1-VNBmXsLBICbIKS0qulHtkpjfd7u9L_4', downloadFile=False, printMin=True)
+# valD = parseLogTrain("./temp_logs/TrainOnlyGAN.txt", plot=False, fileURL='https://drive.google.com/open?id=1-KoSyT9WC1w-qYB37gE02_1Czqo1_ldM', downloadFile=False, printEpoch=160)
 
 # Baseline - Only L1
-#valD = parseLogVal("./temp_logs/OnlyL1.txt", plot=True, fileURL='https://drive.google.com/open?id=1-ZQVhkaWqQs_n6E6enRK-3ZLIx611RPP', downloadFile=False, printMin=True)
+# valD = parseLogVal("./temp_logs/OnlyL1.txt", plot=True, fileURL='https://drive.google.com/open?id=1-ZQVhkaWqQs_n6E6enRK-3ZLIx611RPP', downloadFile=False, printMin=True)
+# valD = parseLogTrain("./temp_logs/TrainOnlyL1.txt", plot=False, fileURL='https://drive.google.com/open?id=1-WcP8L9zRXyL8ZJ2-w4Tz-_dSXcCshnB', downloadFile=False, printEpoch=175)
 
 # Descriptor Loss - lambda 150
-# valD = parseLogVal("./temp_logs/Desc150.txt", plot=True, fileURL='https://drive.google.com/open?id=1-S2wtRwWO5W8vKvq81SiwakMeC8ElfY_', downloadFile=True, printMin=True)
+#valD = parseLogVal("./temp_logs/Desc150.txt", plot=False, fileURL='https://drive.google.com/open?id=1-S2wtRwWO5W8vKvq81SiwakMeC8ElfY_', downloadFile=False, printMin=True)
+#valD = parseLogTrain("./temp_logs/TrainDesc150.txt", plot=False, fileURL='https://drive.google.com/open?id=1-Q7mgAA8jNMdn4GT2XlNm21AzOFdU5cE', downloadFile=False, printEpoch=186)
 
 # Siamese Loss - desc lambda 100
-valD = parseLogVal("./temp_logs/Siamese100.txt", plot=True, fileURL='https://drive.google.com/open?id=1MWm-EExerW6Gc-CgtViBgivrYg9hnBJM', downloadFile=False, printMin=True)
+# valD = parseLogVal("./temp_logs/Siamese100.txt", plot=False, fileURL='https://drive.google.com/open?id=1MWm-EExerW6Gc-CgtViBgivrYg9hnBJM', downloadFile=False, printMin=True)
+# valD = parseLogTrain("./temp_logs/TrainSiamese100.txt", plot=False, fileURL='https://drive.google.com/open?id=1MSqFxxcRxaltEjG3jrxgOrJ1Ir9K4e8e', downloadFile=True, printEpoch=172)
+
+# Siamese Loss - desc lambda 100 2
+# valD = parseLogVal("./temp_logs/Siamese100_2.txt", plot=True, fileURL='https://drive.google.com/open?id=1Vpy6I1YNxgPrl8KnPcS30Y8qMkD3IcJ5', downloadFile=True, printMin=True)
+# valD = parseLogTrain("./temp_logs/TrainSiamese100_2.txt", plot=False, fileURL='https://drive.google.com/open?id=1VitE4omOXdDX9Cm-FirPQ96n_OTFQ6Cs', downloadFile=True, printEpoch=172)
 
 # Baseline
-#valD = parseLogVal("./temp_logs/Baseline.txt", plot=True, fileURL='https://drive.google.com/open?id=10km2K9Tk-yRn6QLD5PBaWfyklpIG6f3p', downloadFile=True, printMin=True)
+# valD = parseLogVal("./temp_logs/Baseline.txt", plot=False, fileURL='https://drive.google.com/open?id=10km2K9Tk-yRn6QLD5PBaWfyklpIG6f3p', downloadFile=True, printMin=True)
+# valD = parseLogTrain("./temp_logs/TrainBaseline181.txt", plot=False, fileURL='https://drive.google.com/open?id=10VvU1PWz2uB4b5_QbXPrhrYlvARpvoEE', downloadFile=False, printEpoch=181)
 
 # Descriptor Loss - lambda 100
-#valD = parseLogVal("./temp_logs/Desc100.txt", plot=True, fileURL='https://drive.google.com/open?id=13SsTOzddTRRVoZTteec5IGAqkG71Fkd_', downloadFile=True, printMin=True)
+# valD = parseLogVal("./temp_logs/Desc100.txt", plot=True, fileURL='https://drive.google.com/open?id=13SsTOzddTRRVoZTteec5IGAqkG71Fkd_', downloadFile=True, printMin=True)
+
+# Descriptor Loss - lambda 100 per channel loss
+#valD = parseLogVal("./temp_logs/Desc100C.txt", plot=True, fileURL='https://drive.google.com/open?id=12H1KcdfRvjFQm4-qQVAbiAePcNiWyDrl', downloadFile=True, printMin=True)
+
+# Siamese Loss - lambda 100 per channel loss
+valD = parseLogVal("./temp_logs/Siamese100C.txt", plot=True, fileURL='https://drive.google.com/open?id=1nY0hBOofl_XDJKa3IhhYdKHIOEBFVxHm', downloadFile=True, printMin=True)
