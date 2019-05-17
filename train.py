@@ -164,7 +164,9 @@ if __name__ == '__main__':
                 model.save_networks(epoch, saveOptimizer=True)
             else:
                 model.save_networks(epoch)
-            bestEpochValLoss = currentGValLoss
+            
+            if (currentGValLoss < bestEpochValLoss) and opt.use_validation:
+                bestEpochValLoss = currentGValLoss
 
         # Save losses to log
         message = 'Epoch: %i ' % epoch
