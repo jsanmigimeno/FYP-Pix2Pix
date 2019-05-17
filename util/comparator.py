@@ -3,6 +3,7 @@ from matplotlib import pyplot as plt
 from matplotlib import image
 import cv2
 from random import randint
+from math import ceil
 
 dataDir = "C:\\CodingSSD\\FYP-General\\SID_Dataset\\Downscaled_JPEG\\All\\Combined\\test"
 manDataDir = "C:\\CodingSSD\\FYP-General\\SID_Dataset\\Downscaled_JPEG\\All\\Combined\\baselineTestMeanAdjust"
@@ -10,82 +11,93 @@ runsDir = "E:\\FYP"
 
 runNames = {
     'DSBaseline': 181,
-    #'DSBaselineOnlyGAN': 160,
-    #'DSBaselineOnlyL1': 175,
+    'DSBaselineOnlyGAN': 160,
+    'DSBaselineOnlyL1': 175,
     'DSDescriptorLossOld': 180,
+    'DSDescriptorLoss150': 186,
     'DSSiamese': 172
 }
 
-nImages = len(runNames)
+class Comparator():
+    def __init__(self, dataDir, manDataDir, runsDir, runNames, ids=[]):
+        self.dataDir = dataDir
+        self.manDataDir = manDataDir
+        self.runsDir = runsDir
+        self.runNames = runNames
+        self.ids = ids
+        self.makeFigure()
+    
+    def makeFigure(self):
+        self.nImages = len(self.runNames)
 
-if nImages < 3:
-    nCols = 3
-else:
-    nCols = nImages
+        nCols = 3
+        nRows = ceil(self.nImages/nCols) + 1
 
-fig, axs = plt.subplots(nrows=2, ncols=nCols, figsize=(2.5*nCols, 4), sharex=True, sharey=True)
+        self.fig, self.axs = plt.subplots(nrows=nRows, ncols=nCols, figsize=(2.5*nCols, 2*nRows + 0.25), sharex=True, sharey=True)
+        plt.subplots_adjust(left=0.005, right=0.995, top=0.9, bottom=0.1)
 
-nextImg = True
+        axnext = plt.axes([0.9, 0.01, 0.075, 0.075]) #left, bottom, width, height
+        bnext = plt.Button(axnext, 'Next')
+        bnext.on_clicked(self.plotImages)
 
-while nextImg:
-    #imgId = '10003_00_0.1s'
-    imgId = ''
-
-    if imgId == '':
-        files = os.listdir(manDataDir)
-        nFiles = len(files)
-        isFile = False
-        while not isFile:
-            idx = randint(0, nFiles)
-            f = files[idx]
-            isFile = os.path.isfile(os.path.join(manDataDir, f))
-        
-        imgId = os.path.splitext(f)[0]
-        print("Image id: %s" % imgId)
-
-    # Get (man) baseline image path
-    imgPath = os.path.join(dataDir, imgId + '.jpg')
-    img = image.imread(imgPath)
-    imgWidth = img.shape[1]//2
-    imgHeight = img.shape[0]
-    axs[0, 0].clear()
-    axs[0, 0].imshow(img[:, 0:imgWidth])
-    axs[0, 0].axis('off')
-    axs[0, 0].title.set_text('Man Baseline')
-
-    imgPath = os.path.join(manDataDir, imgId + '.jpg')
-    img = image.imread(imgPath)
-    imgWidth = img.shape[1]//2
-    imgHeight = img.shape[0]
-    axs[0, 1].clear()
-    axs[0, 1].imshow(img[:, 0:imgWidth])
-    axs[0, 1].axis('off')
-    axs[0, 1].title.set_text('Man Baseline')
-
-    axs[0, 2].clear()
-    axs[0, 2].imshow(img[:, imgWidth:])
-    axs[0, 2].axis('off')
-    axs[0, 2].title.set_text('GT')
-
-    axIdx = 0
-    for name, epoch in runNames.items():
-        imgPath = os.path.join(runsDir, name, 'test_' + str(epoch), 'images', imgId + '_fake_B.jpg')
+        self.plotImages()
+        plt.show()#block=False)
+    
+    def plotImages(self, event="", imgId=""):
+        if imgId == '':
+            if len(self.ids) > 0:
+                imgId = self.ids[0]
+                del self.ids[0]
+            else:
+                files = os.listdir(self.manDataDir)
+                nFiles = len(files)
+                isFile = False
+                while not isFile:
+                    idx = randint(0, nFiles)
+                    f = files[idx]
+                    isFile = os.path.isfile(os.path.join(manDataDir, f))
+                
+                imgId = os.path.splitext(f)[0]
+            print("Image id: %s" % imgId)
+    
+        # Get (man) baseline image path
+        imgPath = os.path.join(self.dataDir, imgId + '.jpg')
         img = image.imread(imgPath)
-        img = cv2.resize(img, (imgWidth, imgHeight))
-        axs[1, axIdx].clear()
-        axs[1, axIdx].imshow(img)
-        axs[1, axIdx].axis('off')
-        axs[1, axIdx].title.set_text(name)
-        axIdx += 1
+        imgWidth = img.shape[1]//2
+        imgHeight = img.shape[0]
+        self.axs[0, 0].clear()
+        self.axs[0, 0].imshow(img[:, 0:imgWidth])
+        self.axs[0, 0].axis('off')
+        self.axs[0, 0].title.set_text('Man Baseline')
 
-    plt.axis('scaled')
-    plt.subplots_adjust(left=0.005, right=0.995, top=0.85, bottom=0.02)
+        imgPath = os.path.join(manDataDir, imgId + '.jpg')
+        img = image.imread(imgPath)
+        imgWidth = img.shape[1]//2
+        imgHeight = img.shape[0]
+        self.axs[0, 1].clear()
+        self.axs[0, 1].imshow(img[:, 0:imgWidth])
+        self.axs[0, 1].axis('off')
+        self.axs[0, 1].title.set_text('Man Baseline')
 
-    fig.canvas.draw_idle()
-    plt.show(block=False)
+        self.axs[0, 2].clear()
+        self.axs[0, 2].imshow(img[:, imgWidth:])
+        self.axs[0, 2].axis('off')
+        self.axs[0, 2].title.set_text('GT')
 
-    textInput = input("Press Enter for new image, any other key to exit: ")
-    if textInput == "":
-        print("Next image...")
-    else:
-        nextImg = False
+        axIdx = 0
+        for name, epoch in runNames.items():
+            imgPath = os.path.join(self.runsDir, name, 'test_' + str(epoch), 'images', imgId + '_fake_B.jpg')
+            img = image.imread(imgPath)
+            img = cv2.resize(img, (imgWidth, imgHeight))
+            self.axs[axIdx//3+1, axIdx % 3].clear()
+            self.axs[axIdx//3+1, axIdx % 3].imshow(img)
+            self.axs[axIdx//3+1, axIdx % 3].axis('off')
+            self.axs[axIdx//3+1, axIdx % 3].title.set_text(name)
+            axIdx += 1
+
+        plt.axis('scaled')
+
+        self.fig.canvas.draw_idle()
+        
+ids = ['10003_00_0.1s', '10170_03_0.1s', '10032_03_0.1s', '10228_04_0.04s' ,'10006_06_0.1s', '10191_09_0.04s', '10016_09_0.1s']
+comp = Comparator(dataDir=dataDir, manDataDir=manDataDir, runsDir=runsDir, runNames=runNames, ids=ids)
