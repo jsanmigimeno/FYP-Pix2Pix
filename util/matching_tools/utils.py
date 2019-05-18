@@ -227,8 +227,7 @@ def extract_patches_from_coords(image, kpts, patch_size=32):
             xOffset = dim_x - x2
         else:
             xOffset = 0
-            
-        print(y1+yOffset,y2+yOffset, x1+xOffset,x2+xOffset)
+        
         patches[i] = image[y1+yOffset:y2+yOffset, x1+xOffset:x2+xOffset]
     return patches
 
