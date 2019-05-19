@@ -1,4 +1,4 @@
-import os
+import os, sys
 from matplotlib import pyplot as plt
 from matplotlib import image
 import cv2
@@ -10,20 +10,24 @@ manDataDir = "C:\\CodingSSD\\FYP-General\\SID_Dataset\\Downscaled_JPEG\\All\\Com
 runsDir = "E:\\FYP"
 
 runNames = {
-    'DSBaseline': 181,
-    'DSBaselineOnlyGAN': 160,
-    'DSBaselineOnlyL1': 175,
-    'DSDescriptorLossOld': 180,
-    'DSDescriptorLoss150': 186,
-    'DSSiamese': 172,
-    'DSSIFT100': 188,
-    'DSGANDescriptor100': 34,
-    'DSDescriptor100_2' : 117
+    'DSBaseline': (181, 'Baseline'),
+    'DSBaselineOnlyGAN': (160, 'Baseline only GAN'),
+    'DSBaselineOnlyL1': (175, 'Baseline only L1'),
+    'DSDescriptorLossOld': (180, '+ HardNet'),
+    'DSDescriptorLoss150': (186, '+ HardNet 150'),
+    'DSSiamese': (172, '+ HardNet Siamese'),
+    'DSSIFT100': (188, '+ SIFT Desc'),
+    'DSGANDescriptor100': (34, '+ HardNet (no L1)'),
+    'DSDescriptor100_2' : (117, '+ HardNet'),
+    'DSSiameseNoL1': (187, '+ HardNet Siamese (no L1)'),
+    'DSSiamese100C': (192, '+ HardNet Siamese (RGB)'),
+    'DSSiameseSIFT': (145, '+ SIFT Siamese')
 }
 
 baselineNames = ['DSBaseline', 'DSBaselineOnlyGAN', 'DSBaselineOnlyL1']
-descriptorNames = ['DSBaseline', 'DSGANDescriptor100', 'DSDescriptor100_2', 'DSSIFT100']
-setNames = ['baseline - 1', 'descriptor - 2', 'siamese - 3']
+descriptorNames = ['DSBaseline', 'DSDescriptor100_2', 'DSSIFT100', 'DSGANDescriptor100']
+siameseNames = ['DSBaseline', 'DSDescriptor100_2', 'DSSiamese', 'DSSiameseNoL1', 'DSSiamese100C', 'DSSiameseSIFT']
+setNames = [baselineNames, descriptorNames, siameseNames]
 
 class Comparator():
     def __init__(self, dataDir, manDataDir, runsDir, runNames, ids=[]):
@@ -31,7 +35,7 @@ class Comparator():
         self.manDataDir = manDataDir
         self.runsDir = runsDir
         self.runNames = runNames
-        self.ids = ids
+        self.ids = ids.copy()
         self.makeFigure()
     
     def makeFigure(self):
@@ -74,7 +78,7 @@ class Comparator():
         imgHeight = img.shape[0]
         self.axs[0, 0].clear()
         self.axs[0, 0].imshow(img[:, 0:imgWidth])
-        self.axs[0, 0].title.set_text('Man Baseline')
+        self.axs[0, 0].title.set_text('Original')
 
         imgPath = os.path.join(manDataDir, imgId + '.jpg')
         img = image.imread(imgPath)
@@ -83,20 +87,20 @@ class Comparator():
         self.axs[0, 1].clear()
         self.axs[0, 1].imshow(img[:, 0:imgWidth])
         
-        self.axs[0, 1].title.set_text('Man Baseline')
+        self.axs[0, 1].title.set_text('Man. Adjust')
 
         self.axs[0, 2].clear()
         self.axs[0, 2].imshow(img[:, imgWidth:])
-        self.axs[0, 2].title.set_text('GT')
+        self.axs[0, 2].title.set_text('Ground Truth')
 
         axIdx = 0
-        for name, epoch in self.runNames.items():
+        for name, (epoch, title) in self.runNames.items():
             imgPath = os.path.join(self.runsDir, name, 'test_' + str(epoch), 'images', imgId + '_fake_B.jpg')
             img = image.imread(imgPath)
             img = cv2.resize(img, (imgWidth, imgHeight))
             self.axs[axIdx//3+1, axIdx % 3].clear()
             self.axs[axIdx//3+1, axIdx % 3].imshow(img)
-            self.axs[axIdx//3+1, axIdx % 3].title.set_text(name)
+            self.axs[axIdx//3+1, axIdx % 3].title.set_text(title)
             axIdx += 1
 
         plt.axis('scaled')
@@ -106,22 +110,25 @@ class Comparator():
 
         self.fig.canvas.draw_idle()
 
-message = "Select set: "
-for name in setNames: 
-    message += "%s " % name
-
+message = "Select set: All (0), Baseline (1), Descriptor (2), Siamese (3): "
 selection = input(message)
 
-if selection == '0':
-    names = runNames
-elif selection == '1':
-    names = baselineNames
-elif selection == '2':
-    names = descriptorNames
-else:
-    names = runNames
-
-runsPlot = dict((k, runNames[k]) for k in names)
-
 ids = ['10003_00_0.1s', '10170_03_0.1s', '10032_03_0.1s', '10228_04_0.04s' ,'10006_06_0.1s', '10191_09_0.04s', '10016_09_0.1s', '10054_00_0.1s']
-comp = Comparator(dataDir=dataDir, manDataDir=manDataDir, runsDir=runsDir, runNames=runsPlot, ids=ids)
+
+if selection == '0':
+    for nameList in setNames:
+        runsPlot = dict((k, runNames[k]) for k in nameList)
+        comp = Comparator(dataDir=dataDir, manDataDir=manDataDir, runsDir=runsDir, runNames=runsPlot, ids=ids)
+else:
+    if selection == '1':
+        names = baselineNames
+    elif selection == '2':
+        names = descriptorNames
+    else:
+        print("Selection not found!")
+        sys.exit()
+    runsPlot = dict((k, runNames[k]) for k in names)
+    comp = Comparator(dataDir=dataDir, manDataDir=manDataDir, runsDir=runsDir, runNames=runsPlot, ids=ids)
+
+
+
