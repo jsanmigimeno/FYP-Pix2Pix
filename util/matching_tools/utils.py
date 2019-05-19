@@ -205,12 +205,30 @@ def extract_patches_from_coords(image, kpts, patch_size=32):
     N = patch_size
     N_half = N // 2
 
-    #dim_y, dim_x = image.shape[0] // patch_size, image.shape[1] // patch_size
+    dim_y, dim_x = image.shape[0], image.shape[1]
     nPathes = len(kpts)
     patches = torch.Tensor(nPathes, N, N).to(image.device)
 
     for i, kp in enumerate(kpts):
-        patches[i] = image[kp[0]-N_half:kp[0]+N_half, kp[1]-N_half:kp[1]+N_half]
+        y1 = kp[0]-N_half
+        y2 = kp[0]+N_half
+        if y1 < 0:
+            yOffset = -y1
+        elif y2 > dim_y:
+            yOffset = dim_y - y2
+        else:
+            yOffset = 0
+    
+        x1 = kp[1]-N_half
+        x2 = kp[1]+N_half
+        if x1 < 0:
+            xOffset = -x1
+        elif x2 > dim_x:
+            xOffset = dim_x - x2
+        else:
+            xOffset = 0
+        
+        patches[i] = image[y1+yOffset:y2+yOffset, x1+xOffset:x2+xOffset]
     return patches
 
 def compute_desc(img, points, descType, checkpoint_path, gpu_ids=[]):
