@@ -15,8 +15,15 @@ runNames = {
     'DSBaselineOnlyL1': 175,
     'DSDescriptorLossOld': 180,
     'DSDescriptorLoss150': 186,
-    'DSSiamese': 172
+    'DSSiamese': 172,
+    'DSSIFT100': 188,
+    'DSGANDescriptor100': 34,
+    'DSDescriptor100_2' : 117
 }
+
+baselineNames = ['DSBaseline', 'DSBaselineOnlyGAN', 'DSBaselineOnlyL1']
+descriptorNames = ['DSBaseline', 'DSGANDescriptor100', 'DSDescriptor100_2', 'DSSIFT100']
+setNames = ['baseline - 1', 'descriptor - 2', 'siamese - 3']
 
 class Comparator():
     def __init__(self, dataDir, manDataDir, runsDir, runNames, ids=[]):
@@ -59,7 +66,7 @@ class Comparator():
                 
                 imgId = os.path.splitext(f)[0]
             print("Image id: %s" % imgId)
-    
+
         # Get (man) baseline image path
         imgPath = os.path.join(self.dataDir, imgId + '.jpg')
         img = image.imread(imgPath)
@@ -67,7 +74,6 @@ class Comparator():
         imgHeight = img.shape[0]
         self.axs[0, 0].clear()
         self.axs[0, 0].imshow(img[:, 0:imgWidth])
-        self.axs[0, 0].axis('off')
         self.axs[0, 0].title.set_text('Man Baseline')
 
         imgPath = os.path.join(manDataDir, imgId + '.jpg')
@@ -76,28 +82,46 @@ class Comparator():
         imgHeight = img.shape[0]
         self.axs[0, 1].clear()
         self.axs[0, 1].imshow(img[:, 0:imgWidth])
-        self.axs[0, 1].axis('off')
+        
         self.axs[0, 1].title.set_text('Man Baseline')
 
         self.axs[0, 2].clear()
         self.axs[0, 2].imshow(img[:, imgWidth:])
-        self.axs[0, 2].axis('off')
         self.axs[0, 2].title.set_text('GT')
 
         axIdx = 0
-        for name, epoch in runNames.items():
+        for name, epoch in self.runNames.items():
             imgPath = os.path.join(self.runsDir, name, 'test_' + str(epoch), 'images', imgId + '_fake_B.jpg')
             img = image.imread(imgPath)
             img = cv2.resize(img, (imgWidth, imgHeight))
             self.axs[axIdx//3+1, axIdx % 3].clear()
             self.axs[axIdx//3+1, axIdx % 3].imshow(img)
-            self.axs[axIdx//3+1, axIdx % 3].axis('off')
             self.axs[axIdx//3+1, axIdx % 3].title.set_text(name)
             axIdx += 1
 
         plt.axis('scaled')
 
+        for ax in self.axs.flatten():
+            ax.axis('off')
+
         self.fig.canvas.draw_idle()
-        
-ids = ['10003_00_0.1s', '10170_03_0.1s', '10032_03_0.1s', '10228_04_0.04s' ,'10006_06_0.1s', '10191_09_0.04s', '10016_09_0.1s']
-comp = Comparator(dataDir=dataDir, manDataDir=manDataDir, runsDir=runsDir, runNames=runNames, ids=ids)
+
+message = "Select set: "
+for name in setNames: 
+    message += "%s " % name
+
+selection = input(message)
+
+if selection == '0':
+    names = runNames
+elif selection == '1':
+    names = baselineNames
+elif selection == '2':
+    names = descriptorNames
+else:
+    names = runNames
+
+runsPlot = dict((k, runNames[k]) for k in names)
+
+ids = ['10003_00_0.1s', '10170_03_0.1s', '10032_03_0.1s', '10228_04_0.04s' ,'10006_06_0.1s', '10191_09_0.04s', '10016_09_0.1s', '10054_00_0.1s']
+comp = Comparator(dataDir=dataDir, manDataDir=manDataDir, runsDir=runsDir, runNames=runsPlot, ids=ids)
