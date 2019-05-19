@@ -101,7 +101,7 @@ if __name__ == '__main__':
 
     test_size = len(dataset)
     webpage.add_header("Overall performance")
-    webpage.add_text(("L1: %.4f, PSNR %.4f, SSIM: %.4f, descriptor L1: %.4f, matching score: %.4f, descriptor L1 (det): %.4f, matching score (det): %.4f" % (L1_total/test_size, PSNR_total/test_size, SSIM_total/test_size, descriptor_L1_total/test_size, matching_total/test_size, descriptorL1_Det/test_size, matching_Det/test_size)))    
+    webpage.add_text(("L1: %.4f, PSNR %.4f, SSIM: %.4f, descriptor L1: %.4f, matching score: %.4f, descriptor L1 (det): %.4f, matching score (det): %.4f" % (L1_total/test_size, PSNR_total/test_size, SSIM_total/test_size, descriptor_L1_total/test_size, matching_total/test_size, descriptor_L1_total_Det/test_size, matching_total_Det/test_size)))    
     webpage.save()  # save the HTML
 
-    print("L1: %.4f, PSNR %.4f, SSIM: %.4f, descriptor L1: %.4f, matching score: %.4f, descriptor L1 (det): %.4f, matching score (det): %.4f" % (L1_total/test_size, PSNR_total/test_size, SSIM_total/test_size, descriptor_L1_total/test_size, matching_total/test_size, descriptorL1_Det/test_size, matching_Det/test_size))
+    print("L1: %.4f, PSNR %.4f, SSIM: %.4f, descriptor L1: %.4f, matching score: %.4f, descriptor L1 (det): %.4f, matching score (det): %.4f" % (L1_total/test_size, PSNR_total/test_size, SSIM_total/test_size, descriptor_L1_total/test_size, matching_total/test_size, descriptor_L1_total_Det/test_size, matching_total_Det/test_size))
