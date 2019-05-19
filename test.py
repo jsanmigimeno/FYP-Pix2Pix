@@ -65,6 +65,8 @@ if __name__ == '__main__':
     descriptor_L1_total = 0
     matching_total_Det = 0
     descriptor_L1_total_Det = 0
+    descriptorL1_Det = 0
+    matching_Det = 0
 
     if opt.eval:
         model.eval()
