@@ -156,7 +156,7 @@ def get_keypoints_coordinates(imgA, imgB, patch_size=32, use_detector=False, num
     else:
         coordinates = []
         # Define a grid where to extract patches
-        dim_y, dim_x = img.shape[0] // patch_size, img.shape[1] // patch_size
+        dim_y, dim_x = imgB.shape[0] // patch_size, imgB.shape[1] // patch_size
         for y in range(dim_y):
             for x in range(dim_x):
                 point = [int((y+0.5)*patch_size), int((x+0.5)*patch_size)]
