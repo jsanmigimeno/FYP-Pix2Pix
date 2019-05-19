@@ -140,10 +140,9 @@ def convert_opencv_matches_to_numpy(matches):
     return np.asarray(correspondences)
 
 
-def get_keypoints_coordinates(img, patch_size=32, use_detector=False, num_points=75, detector=None):
-
+def get_keypoints_coordinates(imgA, imgB, patch_size=32, use_detector=False, num_points=75, detector=None, nonEmptyOnly=False):
     if use_detector:
-        img_local = img.clone().cpu().numpy()
+        img_local = imgB.clone().cpu().numpy()
         if img_local.min() < 0.0:
             img_local = img_local-img_local.min()
         img_local = np.asarray(255 * (img_local / img_local.max()), np.uint8)
@@ -161,7 +160,14 @@ def get_keypoints_coordinates(img, patch_size=32, use_detector=False, num_points
         for y in range(dim_y):
             for x in range(dim_x):
                 point = [int((y+0.5)*patch_size), int((x+0.5)*patch_size)]
-                coordinates.append(point)
+                if nonEmptyOnly:
+                    img_local = imgA.clone().cpu().numpy()
+                    if img_local.min() < 0.0:
+                        img_local = img_local-img_local.min()
+                    if np.max(img_local[int(y*patch_size):int((y+1)*patch_size), int(x*patch_size):int((x+1)*patch_size)]) > 0:
+                         coordinates.append(point)
+                else:
+                    coordinates.append(point)
 
     return np.asarray(coordinates)
 
