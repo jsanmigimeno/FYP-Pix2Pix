@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import requests
 from GDDownload import download_from_gd as dgd
-#%%
 
 def parseLog(filePath, version='auto', plot=False):
     if version == 'auto':
@@ -97,37 +96,25 @@ def parseLogValOld(filePath):
     return data
 
 def cleanDF(data, colName):
-    noErrorFound = False
-    while not noErrorFound:
-        currentMax = 0
-        errorIdx = None
-        errorVal = None
+    def is_number(s):
+        try:
+            float(s)
+            return True
+        except ValueError:
+            return False
 
-        for i, e in enumerate(data[colName]):
+    cleanData = pd.DataFrame(columns=data.columns)
+
+    for i, e in enumerate(data[colName]):
+        if is_number(e):
             try:
-                if float(e) > currentMax:
-                    currentMax = float(e)
-                else:
-                    errorIdx = i
-                    errorVal = float(e)
-                    break
+                cleanData.iloc[int(float(e))-1] = data.iloc[i]
             except:
-                continue
+                cleanData = cleanData.append(data.iloc[i])
+    
+    cleanData.reset_index(drop=True, inplace=True)
         
-        if errorIdx is None:
-            noErrorFound = True
-        
-        if not noErrorFound:
-            for i, e in enumerate(data[colName].values):
-                try:
-                    if float(e) == errorVal:
-                        data.drop(data.index[i:errorIdx], inplace=True)
-                        break
-                except:
-                    continue
-        
-    return data
-
+    return cleanData
 
 def parseLogVal(filePath, version='auto', cleanData=True, plot=False, fileURL=None, downloadFile=False, printMin=False, printEpoch='Min'):
     if downloadFile:
@@ -144,8 +131,9 @@ def parseLogVal(filePath, version='auto', cleanData=True, plot=False, fileURL=No
         data = data.apply(pd.to_numeric)
 
     netLoss = data['L1'] + data['Desc']
+    minIdx = np.argmin(netLoss.values)
+
     if printMin:
-        minIdx = np.argmin(netLoss.values)
         print("Minimum at %i, %.4f (L1 + Desc)" % (minIdx, netLoss.values[minIdx]))
 
     if printEpoch is not None:
@@ -168,68 +156,38 @@ def parseLogVal(filePath, version='auto', cleanData=True, plot=False, fileURL=No
         ax.plot(netLoss.values, label='L1 + Desc')
         ax.legend()
         plt.show()
+
     return data
 
-#logDf = parseLog("E:\FYP\Training Downscaled JPEG\loss_logMerged.txt")
 
-# # # Plot standard log
-# L = parseLog("C:\\Users\\Work\\Downloads\\loss_log (5).txt", plot=True)
-# L1 = L['G_L1'].values
-# Desc = L['G_Desc'].values
-# epochs = L['epoch'].values.astype('int')
-# maxEpoch = np.max(epochs)
-# avgL1 = np.zeros(maxEpoch)
-# avgDesc = np.zeros(maxEpoch)
-# for e in range(1, maxEpoch):
-#     avgL1[e] = np.mean(L1[epochs==e])
-#     avgDesc[e] = np.mean(Desc[epochs==e])
-# plt.plot(avgL1)
-# plt.plot(avgDesc)
-# plt.title('Descriptor Loss')
-# plt.show()
+# Data
+runData = {
+    # name                      : (trainUrl, valUrl, completed)
+    'DSBaseline'                : ('https://drive.google.com/open?id=10VvU1PWz2uB4b5_QbXPrhrYlvARpvoEE', 'https://drive.google.com/open?id=10km2K9Tk-yRn6QLD5PBaWfyklpIG6f3p', False),
+    'DSBaselineOnlyGAN'         : ('https://drive.google.com/open?id=1-KoSyT9WC1w-qYB37gE02_1Czqo1_ldM', 'https://drive.google.com/open?id=1-VNBmXsLBICbIKS0qulHtkpjfd7u9L_4', False),
+    'DSBaselineOnlyL1'          : ('https://drive.google.com/open?id=1-WcP8L9zRXyL8ZJ2-w4Tz-_dSXcCshnB', 'https://drive.google.com/open?id=1-ZQVhkaWqQs_n6E6enRK-3ZLIx611RPP', False), 
+    'DSDescriptorLoss100'       : ('', 'https://drive.google.com/open?id=13SsTOzddTRRVoZTteec5IGAqkG71Fkd_', False),
+    'DSDescriptorLoss100_2'     : ('https://drive.google.com/open?id=1VitE4omOXdDX9Cm-FirPQ96n_OTFQ6Cs', 'https://drive.google.com/open?id=1Vpy6I1YNxgPrl8KnPcS30Y8qMkD3IcJ5', True),
+    'DSDescriptorLoss100C'      : ('', 'https://drive.google.com/open?id=12H1KcdfRvjFQm4-qQVAbiAePcNiWyDrl', False),
+    'DSDescriptorLoss150'       : ('https://drive.google.com/open?id=1-Q7mgAA8jNMdn4GT2XlNm21AzOFdU5cE', 'https://drive.google.com/open?id=1-S2wtRwWO5W8vKvq81SiwakMeC8ElfY_', False),
+    'DSSiamese'                 : ('https://drive.google.com/open?id=1MSqFxxcRxaltEjG3jrxgOrJ1Ir9K4e8e', 'https://drive.google.com/open?id=1MWm-EExerW6Gc-CgtViBgivrYg9hnBJM', False),
+    'DSSiamese100C'             : ('https://drive.google.com/open?id=1nWAUYVkAn8PYEp5yLTHzpGI7BHYWx2JA', 'https://drive.google.com/open?id=1nY0hBOofl_XDJKa3IhhYdKHIOEBFVxHm', False),
+    'DSSIFT100'                 : ('https://drive.google.com/open?id=19sTx4rkjVS6nrdyEU14CRgH0GrT-zpjx', 'https://drive.google.com/open?id=19ub6N2Yt9uuO8Yi-V5bAkt7QT0WSfm4j', True), 
+    'DSGANDescriptor100'        : ('https://drive.google.com/open?id=1mmk4iLayLJcAZbjbm29NE2bIhgN-zPcj', 'https://drive.google.com/open?id=1mnSJo9hY88EEwMhalUW7OGzNuQwi3AKZ', False),
+    'DSSiameseSIFT'             : ('https://drive.google.com/open?id=18a2OXLTA2DQsKgHI1LrnXJ6JI_B-jD3y', 'https://drive.google.com/open?id=18fXNlFF61-KEcOqKnRBtfzPrUsv4EBOn', True),
+    'DSSiameseNoL1'             : ('https://drive.google.com/open?id=1-IbyStSC1qoWv2EoXWf0Z7w-UQrfavku', 'https://drive.google.com/open?id=1-JBxlWIF0CiXIQrOCJ0ZKXkww41oUEgx', False)
+}
 
-# Parse train log
-#parseLogTrain("C:\\Users\\Work\\Downloads\\train_loss_log.txt", plot=True)
+forceDownload = False
 
-# # # Plot validation old
-# #valD = parseLogValOld("C:\\Users\\Work\\Downloads\\val_loss_log (3).txt")
-# #valD = parseLogValOld("E:\\FYP\\Descriptor Loss\\val_loss_log.txt")
-# # plt.plot(valD['val'].values)
-# # plt.title('Descriptor Val. Loss')
-# # plt.show()
+nameId = 'DSSiamese100C'
+urls = runData[nameId]
 
-# # Plot validation
-#valD = parseLogVal("C:\\Users\\Work\\Downloads\\val_loss_log (8).txt", plot=True)
+valData = parseLogVal("./temp_logs/" + nameId + '_val.txt', plot=True, fileURL=urls[1], downloadFile=((not urls[2]) or forceDownload), printMin=True)
+#trainData = parseLogTrain("./temp_logs/" + nameId + '_train.txt', plot=False, fileURL=urls[0], downloadFile=((not urls[2]) or forceDownload), printEpoch=None)
 
-# Baseline - Only GAN
-# valD = parseLogVal("./temp_logs/OnlyGAN.txt", plot=False, fileURL='https://drive.google.com/open?id=1-VNBmXsLBICbIKS0qulHtkpjfd7u9L_4', downloadFile=False, printMin=True)
-# valD = parseLogTrain("./temp_logs/TrainOnlyGAN.txt", plot=False, fileURL='https://drive.google.com/open?id=1-KoSyT9WC1w-qYB37gE02_1Czqo1_ldM', downloadFile=False, printEpoch=160)
-
-# Baseline - Only L1
-# valD = parseLogVal("./temp_logs/OnlyL1.txt", plot=True, fileURL='https://drive.google.com/open?id=1-ZQVhkaWqQs_n6E6enRK-3ZLIx611RPP', downloadFile=False, printMin=True)
-# valD = parseLogTrain("./temp_logs/TrainOnlyL1.txt", plot=False, fileURL='https://drive.google.com/open?id=1-WcP8L9zRXyL8ZJ2-w4Tz-_dSXcCshnB', downloadFile=False, printEpoch=175)
-
-# Descriptor Loss - lambda 150
-#valD = parseLogVal("./temp_logs/Desc150.txt", plot=False, fileURL='https://drive.google.com/open?id=1-S2wtRwWO5W8vKvq81SiwakMeC8ElfY_', downloadFile=False, printMin=True)
-#valD = parseLogTrain("./temp_logs/TrainDesc150.txt", plot=False, fileURL='https://drive.google.com/open?id=1-Q7mgAA8jNMdn4GT2XlNm21AzOFdU5cE', downloadFile=False, printEpoch=186)
-
-# Siamese Loss - desc lambda 100
-# valD = parseLogVal("./temp_logs/Siamese100.txt", plot=False, fileURL='https://drive.google.com/open?id=1MWm-EExerW6Gc-CgtViBgivrYg9hnBJM', downloadFile=False, printMin=True)
-# valD = parseLogTrain("./temp_logs/TrainSiamese100.txt", plot=False, fileURL='https://drive.google.com/open?id=1MSqFxxcRxaltEjG3jrxgOrJ1Ir9K4e8e', downloadFile=True, printEpoch=172)
-
-# Siamese Loss - desc lambda 100 2
-# valD = parseLogVal("./temp_logs/Siamese100_2.txt", plot=True, fileURL='https://drive.google.com/open?id=1Vpy6I1YNxgPrl8KnPcS30Y8qMkD3IcJ5', downloadFile=True, printMin=True)
-# valD = parseLogTrain("./temp_logs/TrainSiamese100_2.txt", plot=False, fileURL='https://drive.google.com/open?id=1VitE4omOXdDX9Cm-FirPQ96n_OTFQ6Cs', downloadFile=True, printEpoch=172)
-
-# Baseline
-# valD = parseLogVal("./temp_logs/Baseline.txt", plot=False, fileURL='https://drive.google.com/open?id=10km2K9Tk-yRn6QLD5PBaWfyklpIG6f3p', downloadFile=True, printMin=True)
-# valD = parseLogTrain("./temp_logs/TrainBaseline181.txt", plot=False, fileURL='https://drive.google.com/open?id=10VvU1PWz2uB4b5_QbXPrhrYlvARpvoEE', downloadFile=False, printEpoch=181)
-
-# Descriptor Loss - lambda 100
-# valD = parseLogVal("./temp_logs/Desc100.txt", plot=True, fileURL='https://drive.google.com/open?id=13SsTOzddTRRVoZTteec5IGAqkG71Fkd_', downloadFile=True, printMin=True)
-
-# Descriptor Loss - lambda 100 per channel loss
-#valD = parseLogVal("./temp_logs/Desc100C.txt", plot=True, fileURL='https://drive.google.com/open?id=12H1KcdfRvjFQm4-qQVAbiAePcNiWyDrl', downloadFile=True, printMin=True)
-
-# Siamese Loss - lambda 100 per channel loss
-valD = parseLogVal("./temp_logs/Siamese100C.txt", plot=True, fileURL='https://drive.google.com/open?id=1nY0hBOofl_XDJKa3IhhYdKHIOEBFVxHm', downloadFile=True, printMin=True)
+# nameIds = ['DSSIFT100', 'DSSiameseSIFT']
+# for name in nameIds:
+#     print(name)
+#     urls = runData[name]
+#     valData = parseLogVal("./temp_logs/" + name + '_val.txt', plot=False, fileURL=urls[1], downloadFile=((not urls[2]) or forceDownload), printMin=True)
