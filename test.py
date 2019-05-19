@@ -63,6 +63,8 @@ if __name__ == '__main__':
     SSIM_total = 0
     matching_total = 0
     descriptor_L1_total = 0
+    matching_total_Det = 0
+    descriptor_L1_total_Det = 0
 
     if opt.eval:
         model.eval()
@@ -86,15 +88,18 @@ if __name__ == '__main__':
         descriptorL1, matching = model.get_Descriptor_loss_and_matching(getMatching=True)
         matching_total += matching
         descriptor_L1_total += descriptorL1
+        if opt.use_detector:
+            descriptorL1_Det, matching_Det = model.get_Descriptor_loss_and_matching(getMatching=True, useDetector=True)
+            matching_total_Det += matching_Det
+            descriptor_L1_total_Det += descriptorL1_Det
 
         # save images to an HTML file
         save_images(webpage, visuals, img_path, aspect_ratio=opt.aspect_ratio, width=opt.display_winsize, compression=opt.output_extension)
-        webpage.add_text(("Losses - L1: %.4f, PSNR: %.4f, SSIM: %.4f, descriptor L1: %.4f, matching score: %.4f" % (L1, PSNR, SSIM, descriptorL1, matching)))
+        webpage.add_text(("Losses - L1: %.4f, PSNR: %.4f, SSIM: %.4f, descriptor L1: %.4f, matching score: %.4f, descriptor L1 (det): %.4f, matching score (det): %.4f" % (L1, PSNR, SSIM, descriptorL1, matching, descriptorL1_Det, matching_Det)))
 
     test_size = len(dataset)
     webpage.add_header("Overall performance")
-    webpage.add_text(("L1: %.4f, PSNR %.4f, SSIM: %.4f, descriptor L1: %.4f, matching score: %.4f" % (L1_total/test_size, PSNR_total/test_size, SSIM_total/test_size, descriptor_L1_total/test_size, matching_total/test_size)))    
+    webpage.add_text(("L1: %.4f, PSNR %.4f, SSIM: %.4f, descriptor L1: %.4f, matching score: %.4f, descriptor L1 (det): %.4f, matching score (det): %.4f" % (L1_total/test_size, PSNR_total/test_size, SSIM_total/test_size, descriptor_L1_total/test_size, matching_total/test_size, descriptorL1_Det/test_size, matching_Det/test_size)))    
     webpage.save()  # save the HTML
 
-    print("L1: %.4f, PSNR %.4f, SSIM: %.4f, matching score: %.4f" % (
-    L1_total / test_size, PSNR_total / test_size, SSIM_total / test_size, matching_total / test_size))
+    print("L1: %.4f, PSNR %.4f, SSIM: %.4f, descriptor L1: %.4f, matching score: %.4f, descriptor L1 (det): %.4f, matching score (det): %.4f" % (L1_total/test_size, PSNR_total/test_size, SSIM_total/test_size, descriptor_L1_total/test_size, matching_total/test_size, descriptorL1_Det/test_size, matching_Det/test_size))
