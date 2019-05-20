@@ -43,7 +43,7 @@ class Pix2PixModel(BaseModel):
         parser.add_argument('--per_channel_descriptor', action='store_true', help='compute descriptor for each RGB channel')
         parser.add_argument('--use_detector', action='store_true', help='use detector when extracting patches')
         parser.add_argument('--descriptor', type=str, default='HardNet', help='descriptor to be used for loss computation: HardNet|SIFT')
-
+        parser.add_argument('--non_empty_patches_only', action='store_true', help='only select non empty patches for descriptor')
         return parser
 
     def __init__(self, opt):
@@ -181,24 +181,36 @@ class Pix2PixModel(BaseModel):
         #Path to checkpoint
         checkpoint_path = self.opt.desc_weights_path
 
+        # Initialise real_B
+        real_B = None
+
         # Convert to Grayscale
-        if not self.opt.per_channel_descriptor:
+        if not self.opt.per_channel_descriptor: # Use grayscale patches
             if not useFakeRealB:
                 real_B = matching_utils.rgb2gray(self.real_B[0].permute(1, 2, 0)).unsqueeze(2)
             else:
                 fake_real_B = matching_utils.rgb2gray(self.fake_real_B[0].permute(1, 2, 0)).unsqueeze(2)
             fake_B = matching_utils.rgb2gray(self.fake_B[0].permute(1, 2, 0)).unsqueeze(2)
-        else:
+        else:   # Use 3 different channels for loss
             if not useFakeRealB:
                 real_B = self.real_B[0].permute(1, 2, 0)
             else:
                 fake_real_B = self.fake_real_B[0].permute(1, 2, 0)
             fake_B = self.fake_B[0].permute(1, 2, 0)
 
-        if not useFakeRealB:
-            indexes = matching_utils.get_keypoints_coordinates(real_B[..., 0], use_detector=useDetector)
+        # Get real A to filter out empty patches (all 0)
+        if self.opt.non_empty_patches_only:
+            real_A = matching_utils.rgb2gray(self.real_A[0].permute(1, 2, 0)).unsqueeze(2)
         else:
-            indexes = matching_utils.get_keypoints_coordinates(fake_real_B[..., 0], use_detector=useDetector)
+            real_A = None
+
+        # Get patches coordinates
+        if real_B is not None and real_B.shape[2] == 1:
+            real_B_gray = real_B
+        else:
+            real_B_gray = matching_utils.rgb2gray(self.real_B[0].permute(1, 2, 0)).unsqueeze(2)
+        
+        indexes = matching_utils.get_keypoints_coordinates(real_A, real_B_gray, use_detector=useDetector)
 
         nChannels = fake_B.shape[2]
 
