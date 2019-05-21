@@ -5,6 +5,7 @@ from math import log10
 from util import ssim
 import numpy as np
 from util.matching_tools import utils as matching_utils
+import sys
 
 class Pix2PixModel(BaseModel):
     """ This class implements the pix2pix model, for learning a mapping from input images to output images given paired data.
@@ -118,6 +119,16 @@ class Pix2PixModel(BaseModel):
         self.loss_D_real = self.criterionGAN(pred_real, True)
         # combine loss and calculate gradients
         self.loss_D = (self.loss_D_fake + self.loss_D_real) * 0.5
+        if torch.isnan(self.loss_D):
+            data = {
+                'fake_AB'       : fake_AB,
+                'pred_fake'     : pred_fake,
+                'loss_D_fake'   : self.loss_D_fake,
+                'real_AB'       : real_AB,
+                'pred_real'     : pred_real,
+                'loss_D_real'   : self.loss_D_real,
+            }
+            raise Exception('DiscriminatorNaN', data)
         self.loss_D.backward()
 
     def backward_G(self):
@@ -139,7 +150,17 @@ class Pix2PixModel(BaseModel):
                 descriptorLoss, self.loss_G_Matching = self.get_Descriptor_loss_and_matching(getMatching=True, useFakeRealB=True, useDetector=self.opt.use_detector, descType=self.opt.descriptor)
             self.loss_G_Desc = descriptorLoss*self.opt.lambda_desc 
             self.loss_G = self.loss_G + self.loss_G_Desc
-        
+        # Catch exploding gradients
+        if torch.isnan(self.loss_G):
+            data = {
+                'fake_AB'       : fake_AB,
+                'pred_fake'     : pred_fake,
+                'loss_G_GAN'    : self.loss_G_GAN,
+                'loss_G_L1'     : self.loss_G_L1,
+                'loss_G_Matching' : self.loss_G_Matching,
+                'descriptorLoss' : self.loss_G_Desc,
+            }
+            raise Exception('GeneratorNaN', data)
         self.loss_G.backward()
 
     def optimize_parameters(self):

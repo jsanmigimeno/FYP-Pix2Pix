@@ -24,9 +24,10 @@ from data import create_dataset
 from models import create_model
 from util.visualizer import Visualizer
 import copy
-import os
+import os, sys
 from util import html
 from collections import OrderedDict
+import pickle
 
 if __name__ == '__main__':
     opt = TrainOptions().parse()   # get training options
@@ -103,7 +104,27 @@ if __name__ == '__main__':
             total_iters += opt.batch_size
             epoch_iter += opt.batch_size
             model.set_input(data)         # unpack data from dataset and apply preprocessing
-            model.optimize_parameters()   # calculate loss functions, get gradients, update network weights
+
+            try:
+                model.optimize_parameters()   # calculate loss functions, get gradients, update network weights
+            except Exception as excpt:
+                excptType, data = excpt.args
+                if excptType == 'DiscriminatorNaN':
+                    print('Discriminator has gone to NaN!')
+                    save_filename = 'discNaNData.pkl'
+                elif excptType == 'GeneratorNaN':
+                    print('Generator has gone to NaN!')
+                    save_filename = 'ganNaNData.pkl'
+                else:
+                    print('Unknown exception!')
+                save_path = os.path.join(model.save_dir, save_filename)
+                with open(save_path, 'wb') as f:
+                    pickle.dump([excptType, data], f)
+                model.save_networks(str(epoch) + '_nan', saveOptimizer=True)
+                losses = model.get_current_losses()
+                t_comp = (time.time() - iter_start_time) / opt.batch_size
+                visualizer.print_current_losses(epoch, epoch_iter, losses, t_comp, t_data)
+                sys.exit()
 
             if total_iters % opt.display_freq == 0:   # display images on visdom and save images to a HTML file
                 save_result = total_iters % opt.update_html_freq == 0
