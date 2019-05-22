@@ -34,6 +34,7 @@ from util.visualizer import save_images
 from util import html
 import torch
 import numpy as np
+from collections import OrderedDict
 
 
 if __name__ == '__main__':
@@ -97,7 +98,9 @@ if __name__ == '__main__':
 
         # save images to an HTML file
         if opt.save_fake_only:
-            visuals = visuals['fake_B']
+            od = OrderedDict()
+            od['fake_B'] = visuals['fake_B']
+            visuals = od
         save_images(webpage, visuals, img_path, aspect_ratio=opt.aspect_ratio, width=opt.display_winsize, compression=opt.output_extension)
         webpage.add_text(("Losses - L1: %.4f, PSNR: %.4f, SSIM: %.4f, descriptor L1: %.4f, matching score: %.4f, descriptor L1 (det): %.4f, matching score (det): %.4f" % (L1, PSNR, SSIM, descriptorL1, matching, descriptorL1_Det, matching_Det)))
 
