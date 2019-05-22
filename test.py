@@ -91,11 +91,13 @@ if __name__ == '__main__':
         matching_total += matching
         descriptor_L1_total += descriptorL1
         if opt.use_detector:
-            descriptorL1_Det, matching_Det = model.get_Descriptor_loss_and_matching(getMatching=True, useDetector=True)
+            descriptorL1_Det, matching_Det = model.get_Descriptor_loss_and_matching(getMatching=True, useDetector=True, num_points=opt.num_points)
             matching_total_Det += matching_Det
             descriptor_L1_total_Det += descriptorL1_Det
 
         # save images to an HTML file
+        if opt.save_fake_only:
+            visuals = visuals['fake_B']
         save_images(webpage, visuals, img_path, aspect_ratio=opt.aspect_ratio, width=opt.display_winsize, compression=opt.output_extension)
         webpage.add_text(("Losses - L1: %.4f, PSNR: %.4f, SSIM: %.4f, descriptor L1: %.4f, matching score: %.4f, descriptor L1 (det): %.4f, matching score (det): %.4f" % (L1, PSNR, SSIM, descriptorL1, matching, descriptorL1_Det, matching_Det)))
 

@@ -45,6 +45,7 @@ class Pix2PixModel(BaseModel):
         parser.add_argument('--use_detector', action='store_true', help='use detector when extracting patches')
         parser.add_argument('--descriptor', type=str, default='HardNet', help='descriptor to be used for loss computation: HardNet|SIFT')
         parser.add_argument('--non_empty_patches_only', action='store_true', help='only select non empty patches for descriptor')
+        parser.add_argument('--num_points', type=int, default=75, help='number of points to detect for patch extraction by the detector')
         return parser
 
     def __init__(self, opt):
@@ -198,7 +199,7 @@ class Pix2PixModel(BaseModel):
         else:
             return ssimMeasure.item() 
 
-    def get_Descriptor_loss_and_matching(self, getMatching=False, useFakeRealB=False, useDetector=False, descType='HardNet'):
+    def get_Descriptor_loss_and_matching(self, getMatching=False, useFakeRealB=False, useDetector=False, descType='HardNet', num_points=75):
         #Path to checkpoint
         checkpoint_path = self.opt.desc_weights_path
 
@@ -231,7 +232,7 @@ class Pix2PixModel(BaseModel):
         else:
             real_B_gray = matching_utils.rgb2gray(self.real_B[0].permute(1, 2, 0)).unsqueeze(2)
         
-        indexes = matching_utils.get_keypoints_coordinates(real_A, real_B_gray, use_detector=useDetector)
+        indexes = matching_utils.get_keypoints_coordinates(real_A, real_B_gray, use_detector=useDetector, num_points=num_points)
 
         nChannels = fake_B.shape[2]
 
