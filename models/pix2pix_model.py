@@ -121,12 +121,12 @@ class Pix2PixModel(BaseModel):
         self.loss_D = (self.loss_D_fake + self.loss_D_real) * 0.5
         if torch.isnan(self.loss_D):
             data = {
-                'fake_AB'       : fake_AB,
-                'pred_fake'     : pred_fake,
-                'loss_D_fake'   : self.loss_D_fake,
-                'real_AB'       : real_AB,
-                'pred_real'     : pred_real,
-                'loss_D_real'   : self.loss_D_real,
+                'fake_AB'       : fake_AB.clone().cpu(),
+                'pred_fake'     : pred_fake.clone().cpu(),
+                'loss_D_fake'   : self.loss_D_fake.clone().cpu(),
+                'real_AB'       : real_AB.clone().cpu(),
+                'pred_real'     : pred_real.clone().cpu(),
+                'loss_D_real'   : self.loss_D_real.clone().cpu(),
             }
             raise Exception('DiscriminatorNaN', data)
         self.loss_D.backward()
@@ -153,12 +153,12 @@ class Pix2PixModel(BaseModel):
         # Catch exploding gradients
         if torch.isnan(self.loss_G):
             data = {
-                'fake_AB'       : fake_AB,
-                'pred_fake'     : pred_fake,
-                'loss_G_GAN'    : self.loss_G_GAN,
-                'loss_G_L1'     : self.loss_G_L1,
-                'loss_G_Matching' : self.loss_G_Matching,
-                'descriptorLoss' : self.loss_G_Desc,
+                'fake_AB'       : fake_AB.clone().cpu(),
+                'pred_fake'     : pred_fake.clone().cpu(),
+                'loss_G_GAN'    : self.loss_G_GAN.clone().cpu(),
+                'loss_G_L1'     : self.loss_G_L1.clone().cpu(),
+                'loss_G_Matching' : self.loss_G_Matching.clone().cpu(),
+                'descriptorLoss' : self.loss_G_Desc.clone().cpu(),
             }
             raise Exception('GeneratorNaN', data)
         self.loss_G.backward()
