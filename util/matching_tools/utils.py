@@ -155,7 +155,7 @@ def get_keypoints_coordinates(imgA, imgB, patch_size=32, use_detector=False, num
         openCV_kps = detector.detect(img_local, None)
         openCV_kps.sort(key=lambda x: x.response, reverse=True)
         coordinates = [[int(kp.pt[1]), int(kp.pt[0])] for kp in openCV_kps[:num_points]]
-        coordinates = np.asarray(coordinates)
+        mask = np.array([True]*len(coordinates))
     else:
         coordinates = []
         keepPatch = []
@@ -185,16 +185,18 @@ def get_keypoints_coordinates(imgA, imgB, patch_size=32, use_detector=False, num
                 else:
                     keepPatch.append(True)
 
-        keepPatch = np.array(keepPatch)
+        
 
         if num_points is not None:
             variance = np.array(variance)
             sortIdx = np.flip(np.argsort(variance))
             selectIdx = sortIdx[0:num_points]
-            keepPatch = selectIdx
+            mask = np.zeros(len(variance), dtype='bool')
+            mask[selectIdx] = True
+        else:
+            mask = np.array(keepPatch)
 
-        coordinates = np.asarray(coordinates)[keepPatch]
-    return coordinates
+    return np.asarray(coordinates), mask
 
 def rgb2gray(rgb):
     return rgb[...,:3] @ torch.tensor([0.2989, 0.5870, 0.1140]).to(rgb.device)

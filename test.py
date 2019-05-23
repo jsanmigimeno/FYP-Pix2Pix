@@ -120,21 +120,19 @@ if __name__ == '__main__':
         metrics['PSNR'][splitId] += PSNR
         SSIM = model.get_SSIM()
         metrics['SSIM'][splitId] += SSIM
-        descriptorL1, matching = model.get_Descriptor_loss_and_matching(getMatching=True)
-        metrics['DescL1_Grid'][splitId] += descriptorL1
-        metrics['Matching_Grid'][splitId] += matching
-        
+
         descriptorL1GBest = 0
         matchingGBest = 0
-        if opt.num_points is not None:
-            descriptorL1GBest, matchingGBest = model.get_Descriptor_loss_and_matching(getMatching=True, num_points=opt.num_points)
-            metrics['DescL1_GBest'][splitId] += descriptorL1GBest
-            metrics['Matching_GBest'][splitId] += matchingGBest
+        descriptorL1GBest, matchingGBest, descriptorL1, matching = model.get_Descriptor_loss_and_matching(getMatching=True, num_points=opt.num_points, includeAllAlways=True)
+        metrics['DescL1_Grid'][splitId] += descriptorL1
+        metrics['Matching_Grid'][splitId] += matching
+        metrics['DescL1_GBest'][splitId] += descriptorL1GBest
+        metrics['Matching_GBest'][splitId] += matchingGBest
 
         descriptorL1_Det = 0
         matching_Det = 0
         if opt.use_detector:
-            descriptorL1_Det, matching_Det = model.get_Descriptor_loss_and_matching(getMatching=True, useDetector=True, num_points=opt.num_points)
+            descriptorL1_Det, matching_Det, *_ = model.get_Descriptor_loss_and_matching(getMatching=True, useDetector=True, num_points=opt.num_points)
             metrics['DescL1_Det'][splitId] += descriptorL1_Det
             metrics['Matching_Det'][splitId] += matching_Det
 
