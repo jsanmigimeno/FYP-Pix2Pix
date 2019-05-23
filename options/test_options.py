@@ -17,6 +17,7 @@ class TestOptions(BaseOptions):
         parser.add_argument('--eval', action='store_true', help='use eval mode during test time.')
         parser.add_argument('--num_test', type=int, default=float('inf'), help='how many test images to run')
         parser.add_argument('--save_fake_only', action='store_true', help='save only fake image')
+        parser.add_argument('--dataset_split', type=str, default=None, help='path to csv file with test set split for granular results')
         # rewrite devalue values
         parser.set_defaults(model='test')
         # To avoid cropping, the load_size should be the same as crop_size

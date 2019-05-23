@@ -35,6 +35,7 @@ from util import html
 import torch
 import numpy as np
 from collections import OrderedDict
+import csv
 
 
 if __name__ == '__main__':
@@ -49,6 +50,19 @@ if __name__ == '__main__':
     opt.serial_batches = True  # disable data shuffling; comment this line if results on randomly chosen images are needed.
     opt.no_flip = True    # no flip; comment this line if results on flipped images are needed.
     opt.display_id = -1   # no visdom display; the test code saves the results to a HTML file.
+
+    # load split
+    splits = []
+    if opt.dataset_split is not None:
+        with open(opt.dataset_split, 'r') as f:
+            reader = csv.reader(f)
+            for line in enumerate(reader):
+                splits.append(line[1])
+        nSplits = len(splits)
+    else:
+        nSplits = 1
+    splitProp = np.array([0]*nSplits)
+
     dataset = create_dataset(opt)  # create a dataset given opt.dataset_mode and other options
     model = create_model(opt)      # create a model given opt.model and other options
     model.setup(opt)               # regular setup: load and print networks; create schedulers
@@ -59,15 +73,18 @@ if __name__ == '__main__':
     # For [pix2pix]: we use batchnorm and dropout in the original pix2pix. You can experiment it with and without eval() mode.
     # For [CycleGAN]: It should not affect CycleGAN as CycleGAN uses instancenorm without dropout.
 
-    L1_total = 0
-    PSNR_total = 0
-    SSIM_total = 0
-    matching_total = 0
-    descriptor_L1_total = 0
-    matching_total_Det = 0
-    descriptor_L1_total_Det = 0
-    descriptorL1_Det = 0
-    matching_Det = 0
+    metrics = {
+        'L1'                : np.array([0.]*nSplits),
+        'PSNR'              : np.array([0.]*nSplits),
+        'SSIM'              : np.array([0.]*nSplits),
+        'DescL1_Grid'       : np.array([0.]*nSplits),
+        'Matching_Grid'     : np.array([0.]*nSplits),
+        'DescL1_GBest'      : np.array([0.]*nSplits),
+        'Matching_GBest'    : np.array([0.]*nSplits),
+        'DescL1_Det'        : np.array([0.]*nSplits),
+        'Matching_Det'      : np.array([0.]*nSplits),
+    }
+    
 
     if opt.eval:
         model.eval()
@@ -78,35 +95,71 @@ if __name__ == '__main__':
         model.test()           # run inference
         visuals = model.get_current_visuals()  # get image results
         img_path = model.get_image_paths()     # get image paths
+        img_name = os.path.split(img_path[0])[-1]
         if i % 5 == 0:  
             print('processing (%04d)-th image... %s' % (i, img_path))
 
+        # Get splitId
+        splitId = None
+        if opt.dataset_split is not None:
+            for i, split in enumerate(splits):
+                if img_name in split:
+                    splitId = i
+                    break
+            if splitId is None:
+                raise Exception("Split not found for %s" % img_name)
+        else:
+            splitId = 0
+
         # Get losses
+        splitProp[splitId] += 1
+
         L1 = model.get_L1_loss()
-        L1_total += L1
+        metrics['L1'][splitId] += L1
         PSNR = model.get_PSNR()
-        PSNR_total += PSNR
+        metrics['PSNR'][splitId] += PSNR
         SSIM = model.get_SSIM()
-        SSIM_total += SSIM
+        metrics['SSIM'][splitId] += SSIM
         descriptorL1, matching = model.get_Descriptor_loss_and_matching(getMatching=True)
-        matching_total += matching
-        descriptor_L1_total += descriptorL1
+        metrics['DescL1_Grid'][splitId] += descriptorL1
+        metrics['Matching_Grid'][splitId] += matching
+        
+        descriptorL1GBest = 0
+        matchingGBest = 0
+        if opt.num_points is not None:
+            descriptorL1GBest, matchingGBest = model.get_Descriptor_loss_and_matching(getMatching=True, num_points=opt.num_points)
+            metrics['DescL1_GBest'][splitId] += descriptorL1GBest
+            metrics['Matching_GBest'][splitId] += matchingGBest
+
+        descriptorL1_Det = 0
+        matching_Det = 0
         if opt.use_detector:
             descriptorL1_Det, matching_Det = model.get_Descriptor_loss_and_matching(getMatching=True, useDetector=True, num_points=opt.num_points)
-            matching_total_Det += matching_Det
-            descriptor_L1_total_Det += descriptorL1_Det
+            metrics['DescL1_Det'][splitId] += descriptorL1_Det
+            metrics['Matching_Det'][splitId] += matching_Det
 
         # save images to an HTML file
         if opt.save_fake_only:
             od = OrderedDict()
             od['fake_B'] = visuals['fake_B']
             visuals = od
+
         save_images(webpage, visuals, img_path, aspect_ratio=opt.aspect_ratio, width=opt.display_winsize, compression=opt.output_extension)
-        webpage.add_text(("Losses - L1: %.4f, PSNR: %.4f, SSIM: %.4f, descriptor L1: %.4f, matching score: %.4f, descriptor L1 (det): %.4f, matching score (det): %.4f" % (L1, PSNR, SSIM, descriptorL1, matching, descriptorL1_Det, matching_Det)))
+        webpage.add_text(("Losses - L1: %.4f, PSNR: %.4f, SSIM: %.4f, descriptor L1: %.4f, matching score: %.4f, descriptor L1 (best): %.4f, matching score (best): %.4f, descriptor L1 (det): %.4f, matching score (det): %.4f" % (L1, PSNR, SSIM, descriptorL1, matching, descriptorL1GBest, matchingGBest, descriptorL1_Det, matching_Det)))
 
     test_size = len(dataset)
     webpage.add_header("Overall performance")
-    webpage.add_text(("L1: %.4f, PSNR %.4f, SSIM: %.4f, descriptor L1: %.4f, matching score: %.4f, descriptor L1 (det): %.4f, matching score (det): %.4f" % (L1_total/test_size, PSNR_total/test_size, SSIM_total/test_size, descriptor_L1_total/test_size, matching_total/test_size, descriptor_L1_total_Det/test_size, matching_total_Det/test_size)))    
-    webpage.save()  # save the HTML
+    for splitId in range(nSplits):
+        message = 'Split %i: \t' % splitId
+        for key, value in metrics.items():
+            message += key + ": %.6f\t" % value[splitId]
+        webpage.add_text(message)
+        print(message)
 
-    print("L1: %.4f, PSNR %.4f, SSIM: %.4f, descriptor L1: %.4f, matching score: %.4f, descriptor L1 (det): %.4f, matching score (det): %.4f" % (L1_total/test_size, PSNR_total/test_size, SSIM_total/test_size, descriptor_L1_total/test_size, matching_total/test_size, descriptor_L1_total_Det/test_size, matching_total_Det/test_size))
+    splitProp = splitProp/np.sum(splitProp)
+    message = 'Total: \t\t'
+    for key, value in metrics.items():
+        message += key + ": %.6f\t" % np.matmul(value, splitProp/np.sum(splitProp))
+    webpage.add_text(message)
+    print(message)
+    webpage.save()  # save the HTML

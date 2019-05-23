@@ -140,8 +140,11 @@ def convert_opencv_matches_to_numpy(matches):
     return np.asarray(correspondences)
 
 
-def get_keypoints_coordinates(imgA, imgB, patch_size=32, use_detector=False, num_points=75, detector=None, nonEmptyOnly=False):
+def get_keypoints_coordinates(imgA, imgB, patch_size=32, use_detector=False, num_points=None, detector=None, nonEmptyOnly=False):
     if use_detector:
+        if num_points is None:
+            raise Exception('Number of patches to extract was not specified!')
+
         img_local = imgB.clone().cpu().numpy()
         if img_local.min() < 0.0:
             img_local = img_local-img_local.min()
@@ -155,21 +158,44 @@ def get_keypoints_coordinates(imgA, imgB, patch_size=32, use_detector=False, num
 
     else:
         coordinates = []
+        keepPatch = []
+        variance = []
+
+        if nonEmptyOnly or num_points is not None:
+            img_local = imgA.clone().cpu().numpy()
+            if img_local.min() < 0.0:
+                img_local = img_local-img_local.min()
+                
         # Define a grid where to extract patches
         dim_y, dim_x = imgB.shape[0] // patch_size, imgB.shape[1] // patch_size
         for y in range(dim_y):
             for x in range(dim_x):
                 point = [int((y+0.5)*patch_size), int((x+0.5)*patch_size)]
+                coordinates.append(point)
+                
+                # Filter out empty patches
                 if nonEmptyOnly:
-                    img_local = imgA.clone().cpu().numpy()
-                    if img_local.min() < 0.0:
-                        img_local = img_local-img_local.min()
                     if np.max(img_local[int(y*patch_size):int((y+1)*patch_size), int(x*patch_size):int((x+1)*patch_size)]) > 0:
-                         coordinates.append(point)
-                else:
-                    coordinates.append(point)
+                        keepPatch.append(True)
+                    else:
+                        keepPatch.append(False)
 
-    return np.asarray(coordinates)
+                # Get patch variance
+                elif num_points is not None:
+                    variance.append(np.var(img_local[int(y*patch_size):int((y+1)*patch_size), int(x*patch_size):int((x+1)*patch_size)]))
+                
+                else:
+                    keepPatch.append(True)
+
+        keepPatch = np.array(keepPatch)
+
+        if num_points is not None:
+            variance = np.array(variance)
+            sortIdx = np.flip(np.argsort(variance))
+            selectIdx = sortIdx[0:num_points]
+            keepPatch = selectIdx
+
+    return np.asarray(coordinates)[keepPatch]
 
 def rgb2gray(rgb):
     return rgb[...,:3] @ torch.tensor([0.2989, 0.5870, 0.1140]).to(rgb.device)

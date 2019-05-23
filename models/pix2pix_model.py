@@ -45,7 +45,8 @@ class Pix2PixModel(BaseModel):
         parser.add_argument('--use_detector', action='store_true', help='use detector when extracting patches')
         parser.add_argument('--descriptor', type=str, default='HardNet', help='descriptor to be used for loss computation: HardNet|SIFT')
         parser.add_argument('--non_empty_patches_only', action='store_true', help='only select non empty patches for descriptor')
-        parser.add_argument('--num_points', type=int, default=75, help='number of points to detect for patch extraction by the detector')
+        parser.add_argument('--num_points', type=int, default=None, help='number of points to detect for patch extraction by the detector. This option overrides non_empty_patches_only')
+        parser.add_argument('--log_trans', action='store_true', help='perform logarithmic transfor to the dataset')
         return parser
 
     def __init__(self, opt):
@@ -145,10 +146,10 @@ class Pix2PixModel(BaseModel):
         # Third, descriptor loss
         if self.opt.lambda_desc != 0:
             if not self.opt.siamese_descriptor:
-                descriptorLoss, self.loss_G_Matching = self.get_Descriptor_loss_and_matching(getMatching=True, useDetector=self.opt.use_detector, descType=self.opt.descriptor)
+                descriptorLoss, self.loss_G_Matching = self.get_Descriptor_loss_and_matching(getMatching=True, useDetector=self.opt.use_detector, descType=self.opt.descriptor, num_points=self.opt.num_points)
             else:
                 self.forward_real()
-                descriptorLoss, self.loss_G_Matching = self.get_Descriptor_loss_and_matching(getMatching=True, useFakeRealB=True, useDetector=self.opt.use_detector, descType=self.opt.descriptor)
+                descriptorLoss, self.loss_G_Matching = self.get_Descriptor_loss_and_matching(getMatching=True, useFakeRealB=True, useDetector=self.opt.use_detector, descType=self.opt.descriptor, num_points=self.opt.num_points)
             self.loss_G_Desc = descriptorLoss*self.opt.lambda_desc 
             self.loss_G = self.loss_G + self.loss_G_Desc
         # Catch exploding gradients
@@ -199,7 +200,8 @@ class Pix2PixModel(BaseModel):
         else:
             return ssimMeasure.item() 
 
-    def get_Descriptor_loss_and_matching(self, getMatching=False, useFakeRealB=False, useDetector=False, descType='HardNet', num_points=75):
+    def get_Descriptor_loss_and_matching(self, getMatching=False, useFakeRealB=False, useDetector=False, descType='HardNet', num_points=None):
+
         #Path to checkpoint
         checkpoint_path = self.opt.desc_weights_path
 
@@ -209,19 +211,23 @@ class Pix2PixModel(BaseModel):
         # Convert to Grayscale
         if not self.opt.per_channel_descriptor: # Use grayscale patches
             if not useFakeRealB:
+                # Standard loss
                 real_B = matching_utils.rgb2gray(self.real_B[0].permute(1, 2, 0)).unsqueeze(2)
             else:
+                #Siamese loss
                 fake_real_B = matching_utils.rgb2gray(self.fake_real_B[0].permute(1, 2, 0)).unsqueeze(2)
             fake_B = matching_utils.rgb2gray(self.fake_B[0].permute(1, 2, 0)).unsqueeze(2)
         else:   # Use 3 different channels for loss
             if not useFakeRealB:
+                # Standard loss
                 real_B = self.real_B[0].permute(1, 2, 0)
             else:
+                # Siamese loss
                 fake_real_B = self.fake_real_B[0].permute(1, 2, 0)
             fake_B = self.fake_B[0].permute(1, 2, 0)
 
         # Get real A to filter out empty patches (all 0)
-        if self.opt.non_empty_patches_only:
+        if self.opt.non_empty_patches_only or num_points is not None:
             real_A = matching_utils.rgb2gray(self.real_A[0].permute(1, 2, 0)).unsqueeze(2)
         else:
             real_A = None
@@ -232,7 +238,7 @@ class Pix2PixModel(BaseModel):
         else:
             real_B_gray = matching_utils.rgb2gray(self.real_B[0].permute(1, 2, 0)).unsqueeze(2)
         
-        indexes = matching_utils.get_keypoints_coordinates(real_A, real_B_gray, use_detector=useDetector, num_points=num_points)
+        indexes = matching_utils.get_keypoints_coordinates(real_A, real_B_gray, use_detector=useDetector, num_points=num_points, nonEmptyOnly=self.opt.non_empty_patches_only)
 
         nChannels = fake_B.shape[2]
 

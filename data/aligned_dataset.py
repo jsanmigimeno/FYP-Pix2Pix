@@ -4,6 +4,7 @@ from data.base_dataset import BaseDataset, get_params, get_transform
 import torchvision.transforms as transforms
 from data.image_folder import make_dataset
 from PIL import Image
+import torch
 
 
 class AlignedDataset(BaseDataset):
@@ -47,7 +48,6 @@ class AlignedDataset(BaseDataset):
         A = AB.crop((0, 0, w2, h))
         B = AB.crop((w2, 0, w, h))
 
-        # apply the same transform to both A and B
         transform_params = get_params(self.opt, A.size)
         A_transform = get_transform(self.opt, transform_params, grayscale=(self.input_nc == 1))
         B_transform = get_transform(self.opt, transform_params, grayscale=(self.output_nc == 1))
@@ -55,8 +55,16 @@ class AlignedDataset(BaseDataset):
         A = A_transform(A)
         B = B_transform(B)
 
+        # apply the same transform to both A and B
+        if self.opt.log_trans:
+            A = self.logTrans(A)
+
         return {'A': A, 'B': B, 'A_paths': AB_path, 'B_paths': AB_path}
 
     def __len__(self):
         """Return the total number of images in the dataset."""
         return len(self.AB_paths)
+
+    def logTrans(self, A):
+        c = 255/torch.log(1+torch.max(A))
+        return c*torch.log(1+A)
