@@ -123,7 +123,6 @@ if __name__ == '__main__':
 
         descriptorL1GBest = 0
         matchingGBest = 0
-        pdb.set_trace()
         descriptorL1GBest, matchingGBest, descriptorL1, matching = model.get_Descriptor_loss_and_matching(getMatching=True, num_points=opt.num_points, includeAllAlways=True)
         metrics['DescL1_Grid'][splitId] += descriptorL1
         metrics['Matching_Grid'][splitId] += matching
