@@ -36,7 +36,7 @@ import torch
 import numpy as np
 from collections import OrderedDict
 import csv
-
+import pdb
 
 if __name__ == '__main__':
 
@@ -92,9 +92,7 @@ if __name__ == '__main__':
         if i >= opt.num_test:  # only apply our model to opt.num_test images.
             break
         model.set_input(data)  # unpack data from data loader
-        print("Start")
         model.test()           # run inference
-        print("End")
         visuals = model.get_current_visuals()  # get image results
         img_path = model.get_image_paths()     # get image paths
         img_name = os.path.split(img_path[0])[-1]
@@ -125,6 +123,7 @@ if __name__ == '__main__':
 
         descriptorL1GBest = 0
         matchingGBest = 0
+        pdb.set_trace()
         descriptorL1GBest, matchingGBest, descriptorL1, matching = model.get_Descriptor_loss_and_matching(getMatching=True, num_points=opt.num_points, includeAllAlways=True)
         metrics['DescL1_Grid'][splitId] += descriptorL1
         metrics['Matching_Grid'][splitId] += matching
