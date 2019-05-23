@@ -145,6 +145,13 @@ if __name__ == '__main__':
         save_images(webpage, visuals, img_path, aspect_ratio=opt.aspect_ratio, width=opt.display_winsize, compression=opt.output_extension)
         webpage.add_text(("Losses - L1: %.4f, PSNR: %.4f, SSIM: %.4f, descriptor L1: %.4f, matching score: %.4f, descriptor L1 (best): %.4f, matching score (best): %.4f, descriptor L1 (det): %.4f, matching score (det): %.4f" % (L1, PSNR, SSIM, descriptorL1, matching, descriptorL1GBest, matchingGBest, descriptorL1_Det, matching_Det)))
 
+    # Get average values
+    for splitId in range(nSplits):
+        for key, value in metrics.items():
+            if splitProp[splitId] == 0:
+                break
+            metrics[key][splitId] = value[splitId]/splitProp[splitId]
+
     test_size = len(dataset)
     webpage.add_header("Overall performance")
     for splitId in range(nSplits):
