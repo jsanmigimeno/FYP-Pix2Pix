@@ -253,7 +253,9 @@ class Pix2PixModel(BaseModel):
         matching_score_All = 0
 
         for channel in range(nChannels):
-
+            if self.opt.non_empty_patches_only and True not in mask:
+                break
+                
             if not useFakeRealB:
                 real_B_T = real_B[..., channel]
                 desc_real_B = matching_utils.compute_desc(real_B_T, indexes, descType=descType, checkpoint_path=checkpoint_path, gpu_ids=self.gpu_ids)
