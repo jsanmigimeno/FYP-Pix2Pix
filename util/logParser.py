@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import requests
 from GDDownload import download_from_gd as dgd
+from OneDownload import download_from_onedrive as dod
 
 def parseLog(filePath, version='auto', plot=False):
     if version == 'auto':
@@ -118,7 +119,10 @@ def cleanDF(data, colName):
 
 def parseLogVal(filePath, version='auto', cleanData=True, plot=False, fileURL=None, downloadFile=False, printMin=False, printEpoch='Min'):
     if downloadFile:
-        dgd(fileURL, filePath)
+        if 'google' in fileURL:
+            dgd(fileURL, filePath)
+        else:
+            dod(fileURL, filePath)
 
     # Column names of log file
     colNames = ["epochT", "epoch", "L1T", "L1", "PSNRT", "PSNR", "SSIMT", "SSIM", "DescT", "Desc", "MatchT", "Match"]
@@ -163,24 +167,30 @@ def parseLogVal(filePath, version='auto', cleanData=True, plot=False, fileURL=No
 # Data
 runData = {
     # name                      : (trainUrl, valUrl, completed)
-    'DSBaseline'                : ('https://drive.google.com/open?id=10VvU1PWz2uB4b5_QbXPrhrYlvARpvoEE', 'https://drive.google.com/open?id=10km2K9Tk-yRn6QLD5PBaWfyklpIG6f3p', False),
-    'DSBaselineOnlyGAN'         : ('https://drive.google.com/open?id=1-KoSyT9WC1w-qYB37gE02_1Czqo1_ldM', 'https://drive.google.com/open?id=1-VNBmXsLBICbIKS0qulHtkpjfd7u9L_4', False),
-    'DSBaselineOnlyL1'          : ('https://drive.google.com/open?id=1-WcP8L9zRXyL8ZJ2-w4Tz-_dSXcCshnB', 'https://drive.google.com/open?id=1-ZQVhkaWqQs_n6E6enRK-3ZLIx611RPP', False), 
-    'DSDescriptorLoss100'       : ('', 'https://drive.google.com/open?id=13SsTOzddTRRVoZTteec5IGAqkG71Fkd_', False),
+    'DSBaseline'                : ('https://imperiallondon-my.sharepoint.com/:t:/g/personal/js5415_ic_ac_uk/EaDDBK7A0CFIroCXFtp2XO0BKanbYDkeMDWFuLSpbMlIwQ?download=1', 'https://imperiallondon-my.sharepoint.com/:t:/g/personal/js5415_ic_ac_uk/EeKn0BA3Ue5GtLFX031BPTABNZpg95AsvEnNteAf6SiMlg?download=1', False),
+    'DSBaselineOnlyGAN'         : ('https://imperiallondon-my.sharepoint.com/:t:/g/personal/js5415_ic_ac_uk/ERJk3E5dcn1HifvzPZUz72UB6RAWgmLpaRWaUqgf8WOIuA?download=1', 'https://imperiallondon-my.sharepoint.com/:t:/g/personal/js5415_ic_ac_uk/EZA2_jDoqFlAtTfWgyISzFMBmf8YzOmovRcDdIQuNGH3eg?download=1', False),
+    'DSBaselineOnlyL1'          : ('https://imperiallondon-my.sharepoint.com/:t:/g/personal/js5415_ic_ac_uk/EZg7U5gF1TFMoSVDmEEw1pABiewA01sZX7OWhbZvcHwJfw?download=1', 'https://imperiallondon-my.sharepoint.com/:t:/g/personal/js5415_ic_ac_uk/EXucrF6sMh9ApdAETh4-nX0Bm1aIr0CXHcU68WE6_3lo7w?download=1', False), 
+    #'DSDescriptorLoss100'       : ('', 'https://drive.google.com/open?id=13SsTOzddTRRVoZTteec5IGAqkG71Fkd_', False),
     'DSDescriptorLoss100_2'     : ('https://drive.google.com/open?id=1VitE4omOXdDX9Cm-FirPQ96n_OTFQ6Cs', 'https://drive.google.com/open?id=1Vpy6I1YNxgPrl8KnPcS30Y8qMkD3IcJ5', True),
     'DSDescriptorLoss100C'      : ('', 'https://drive.google.com/open?id=12H1KcdfRvjFQm4-qQVAbiAePcNiWyDrl', False),
-    'DSDescriptorLoss150'       : ('https://drive.google.com/open?id=1-Q7mgAA8jNMdn4GT2XlNm21AzOFdU5cE', 'https://drive.google.com/open?id=1-S2wtRwWO5W8vKvq81SiwakMeC8ElfY_', False),
-    'DSSiamese'                 : ('https://drive.google.com/open?id=1MSqFxxcRxaltEjG3jrxgOrJ1Ir9K4e8e', 'https://drive.google.com/open?id=1MWm-EExerW6Gc-CgtViBgivrYg9hnBJM', False),
+    'DSDescriptorLoss150'       : ('https://imperiallondon-my.sharepoint.com/:t:/g/personal/js5415_ic_ac_uk/EWG7l1k5hn5MoGV3kV1yZCoBo4yk_BZOHnUZvA8VPehlMA?download=1', 'https://imperiallondon-my.sharepoint.com/:t:/g/personal/js5415_ic_ac_uk/EZli-b1DKr1FjE1ySAXKAKsB9WjKEUZVXAgBzAPSa4lSDQ?download=1', False),
+    'DSSiamese'                 : ('https://imperiallondon-my.sharepoint.com/:t:/g/personal/js5415_ic_ac_uk/EYlvQXil-25HmVfmt9PpmOAB6aEwxQg1xXFAVSh4uT07QA?download=1', 'https://imperiallondon-my.sharepoint.com/:t:/g/personal/js5415_ic_ac_uk/Ec_zEDO4VNlAsa5Q0ZFF-xABHs4svO4x-4URPIOC4xOrbw?download=1', False),
     'DSSiamese100C'             : ('https://drive.google.com/open?id=1nWAUYVkAn8PYEp5yLTHzpGI7BHYWx2JA', 'https://drive.google.com/open?id=1nY0hBOofl_XDJKa3IhhYdKHIOEBFVxHm', False),
     'DSSIFT100'                 : ('https://drive.google.com/open?id=19sTx4rkjVS6nrdyEU14CRgH0GrT-zpjx', 'https://drive.google.com/open?id=19ub6N2Yt9uuO8Yi-V5bAkt7QT0WSfm4j', True), 
     'DSGANDescriptor100'        : ('https://drive.google.com/open?id=1mmk4iLayLJcAZbjbm29NE2bIhgN-zPcj', 'https://drive.google.com/open?id=1mnSJo9hY88EEwMhalUW7OGzNuQwi3AKZ', False),
     'DSSiameseSIFT'             : ('https://drive.google.com/open?id=18a2OXLTA2DQsKgHI1LrnXJ6JI_B-jD3y', 'https://drive.google.com/open?id=18fXNlFF61-KEcOqKnRBtfzPrUsv4EBOn', True),
-    'DSSiameseNoL1'             : ('https://drive.google.com/open?id=1-IbyStSC1qoWv2EoXWf0Z7w-UQrfavku', 'https://drive.google.com/open?id=1-JBxlWIF0CiXIQrOCJ0ZKXkww41oUEgx', False)
+    'DSSiameseNoL1'             : ('https://drive.google.com/open?id=1-IbyStSC1qoWv2EoXWf0Z7w-UQrfavku', 'https://drive.google.com/open?id=1-JBxlWIF0CiXIQrOCJ0ZKXkww41oUEgx', False),
+    'DSDescriptorNEP'           : ('', 'https://drive.google.com/open?id=1-kesyz3aYSB3tZ1wltwtTRWeYhPC6pzy', False),
+    'DSDescriptor100C_2'        : ('https://drive.google.com/open?id=1-C9gyUm8nafsWK5y_r_S68UxtzEtNTZx', 'https://drive.google.com/open?id=1-ESjy4g5LfOj6NoMsOD-DkmE_oQ6X0LA', True),
+    'DSDescriptor200'           : ('https://drive.google.com/open?id=106HwnLKKWreSs_0DqVTJUhg_osQN0von', 'https://drive.google.com/open?id=106T7donTpAblst_IkvYDc63Vl6n8z5El', False),
+    'DSDescLog'                 : ('', 'https://drive.google.com/open?id=1-tQXYghd92ftv_R_Lmya4Nc0uDYukazq', False),
+    'DSBaselineLog'             : ('', 'https://drive.google.com/open?id=1O--eM8DcO4kgImhV8Sre9EAU5K8fY4ew', False),
+    'DSSiameseLog'              : ('', 'https://drive.google.com/open?id=1-RHFvZ1mApXMiK81gyjoWzisWgciyzi4', False)
 }
 
 forceDownload = False
 
-nameId = 'DSSiamese100C'
+nameId = 'DSSiameseLog'
 urls = runData[nameId]
 
 valData = parseLogVal("./temp_logs/" + nameId + '_val.txt', plot=True, fileURL=urls[1], downloadFile=((not urls[2]) or forceDownload), printMin=True)
