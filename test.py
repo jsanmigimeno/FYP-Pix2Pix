@@ -92,7 +92,11 @@ if __name__ == '__main__':
         if i >= opt.num_test:  # only apply our model to opt.num_test images.
             break
         model.set_input(data)  # unpack data from data loader
-        model.test()           # run inference
+        if not opt.bypass_inference:
+            model.test()           # run inference
+        else:
+            model.fake_forward()
+            
         visuals = model.get_current_visuals()  # get image results
         img_path = model.get_image_paths()     # get image paths
         img_name = os.path.split(img_path[0])[-1]

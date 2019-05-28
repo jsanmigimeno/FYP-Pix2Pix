@@ -105,6 +105,9 @@ class Pix2PixModel(BaseModel):
         """Run forward pass; called by both functions <optimize_parameters> and <test>."""
         self.fake_B = self.netG(self.real_A)  # G(A)
 
+    def fake_forward(self):
+        self.fake_B = self.real_A
+
     def forward_real(self):
         """Run forward pass on ground truth image"""
         self.fake_real_B = self.netG(self.real_B)
