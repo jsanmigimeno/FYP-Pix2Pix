@@ -117,7 +117,7 @@ def cleanDF(data, colName):
         
     return cleanData
 
-def parseLogVal(filePath, version='auto', cleanData=True, plot=False, fileURL=None, downloadFile=False, printMin=False, printEpoch='Min'):
+def parseLogVal(filePath, version='auto', cleanData=True, plot=False, fileURL=None, downloadFile=False, printMin=False, printEpoch='Min', title=None, save=False):
     if downloadFile:
         if 'google' in fileURL:
             dgd(fileURL, filePath)
@@ -152,17 +152,25 @@ def parseLogVal(filePath, version='auto', cleanData=True, plot=False, fileURL=No
 
     if plot:
         plt.rcParams["font.family"] = "Times New Roman"
-        fig, ax = plt.subplots()
-        plt.title('Validation Losses')
-        plotNames = useCols[1:]
-        for name in plotNames:
-            ax.plot(data[name].values, label=name)
-        ax.plot(netLoss.values, label='L1 + Desc')
-        ax.legend()
+        fig, ax = plt.subplots(figsize=(8, 3.5))
+        plt.plot(data['L1'].values/2)
+        if title is None:
+            title = 'Validation Loss'
+        plt.title(title, fontsize=18)
+        plt.xlabel('Epoch', fontsize=16)
+        #plt.xticks([0] + list(range(24, 224, 25)), [1] + list(range(25, 225, 25)), fontsize=14)
+        plt.yticks(fontsize=14)
+        plt.ylabel('L1', fontsize=16)
+        plt.subplots_adjust(left=0.095, right=0.980, top=0.910, bottom=0.160)
+        plt.grid()
+
+        if save:
+            fileName = './figures/' + title.replace(" ", "") + '.eps'
+            plt.savefig(fileName)
+
         plt.show()
 
     return data
-
 
 # Data
 runData = {
@@ -185,15 +193,27 @@ runData = {
     'DSDescriptor200'           : ('https://drive.google.com/open?id=106HwnLKKWreSs_0DqVTJUhg_osQN0von', 'https://drive.google.com/open?id=106T7donTpAblst_IkvYDc63Vl6n8z5El', False),
     'DSDescLog'                 : ('', 'https://drive.google.com/open?id=1-tQXYghd92ftv_R_Lmya4Nc0uDYukazq', False),
     'DSBaselineLog'             : ('', 'https://drive.google.com/open?id=1O--eM8DcO4kgImhV8Sre9EAU5K8fY4ew', False),
-    'DSSiameseLog'              : ('', 'https://drive.google.com/open?id=1-RHFvZ1mApXMiK81gyjoWzisWgciyzi4', False)
+    'DSSiameseLog'              : ('', 'https://drive.google.com/open?id=1-RHFvZ1mApXMiK81gyjoWzisWgciyzi4', False),
+    'DSSiameseLogC'             : ('', 'https://drive.google.com/open?id=1-97XBcyc_Y0zIvutToUNzSrMjDCsoMqG', False),
+    'DSDescriptor300'           : ('https://imperiallondon-my.sharepoint.com/:t:/g/personal/js5415_ic_ac_uk/EXsqHZwxSMxIpuSXJvGGvdYBrIaeTvbXPgGhW79VtSzWFA?download=1', 'https://imperiallondon-my.sharepoint.com/:t:/g/personal/js5415_ic_ac_uk/EdTWo_4q5cZMjWGGNluiWR8B91Bu7S8ytL5h_jEEL619Hw?download=1', False),
+    'DSDescriptorLog200'        : ('', 'https://drive.google.com/open?id=1-RkaGYFX1BTB6247ierovsSwClroC-_O', False),
+    'DSDescriptorLog300'        : ('', 'https://drive.google.com/open?id=1-IWtRAffu6WOUqD2W_yFSt6wSqPV50WD', False),
+    'DSDescriptorLog400'        : ('', 'https://drive.google.com/open?id=1-LW3afFms0YxR5oiiWtfvq5sJJZ3cGcu', False),
+    'DSDescriptorLog500'        : ('', 'https://drive.google.com/open?id=1-M-SHDZZVAXEYUvVTJBrWll0T9IkZGWY', False),
+    'DSSiameseLog200'           : ('', 'https://drive.google.com/open?id=1-c3pt35rY7FzkHNPYszza177r3Um2cTz', False),
+    'DSSiameseLog300'           : ('', 'https://drive.google.com/open?id=1-YboSiRveJfLwdAzp0XhIsTcf5hK891e', False),
+    'DSSiameseLog400'           : ('', 'https://drive.google.com/open?id=1-NPl19SDd0vZU7Vi94hqYA_6WQCA-Mkm', False),
+    'DSSiameseLog500'           : ('', 'https://drive.google.com/open?id=1-WO8ivF4v1ivoBvKo_iRshBCZDJ1QH6i', False),
 }
 
 forceDownload = False
 
-nameId = 'DSSiameseLog'
+nameId = 'DSSiameseLog500'
+title = 'Baseline Validation Loss'
+save = True
 urls = runData[nameId]
 
-valData = parseLogVal("./temp_logs/" + nameId + '_val.txt', plot=True, fileURL=urls[1], downloadFile=((not urls[2]) or forceDownload), printMin=True)
+valData = parseLogVal("./temp_logs/" + nameId + '_val.txt', plot=True, fileURL=urls[1], downloadFile=((not urls[2]) or forceDownload), printMin=True, save=save, title=title)
 #trainData = parseLogTrain("./temp_logs/" + nameId + '_train.txt', plot=False, fileURL=urls[0], downloadFile=((not urls[2]) or forceDownload), printEpoch=None)
 
 # nameIds = ['DSSIFT100', 'DSSiameseSIFT']

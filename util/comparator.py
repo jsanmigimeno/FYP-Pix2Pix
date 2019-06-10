@@ -8,7 +8,7 @@ import numpy as np
 import csv
 
 dataDir = "C:\\CodingSSD\\FYP-General\\SID_Dataset\\Downscaled_JPEG\\All\\Combined\\test"
-manDataDir = "C:\\CodingSSD\\FYP-General\\SID_Dataset\\Downscaled_JPEG\\All\\Combined\\baselineTestMeanAdjust"
+manDataDir = "C:\\CodingSSD\\FYP-General\\SID_Dataset\\DSLog\\test"
 runsDir = "C:\\CodingSSD\\TestResults"
 
 runNames = {
@@ -24,15 +24,30 @@ runNames = {
     'DSSiameseNoL1': (187, '+ HardNet Siamese (no L1)'),
     'DSSiamese100C': (192, '+ HardNet Siamese (RGB)'),
     'DSSiameseSIFT': (145, '+ SIFT Siamese'),
-    #'DSDescriptor200': (195, '+ HardNet 200'),
-    #'DSDescriptorNEP': (142, '+ HardNet (no emp. pat)')
+    'DSDescriptorNEP': (168, '+ HardNet (no emp. pat)'),
+    'DSBaselineLog': (168, 'Baseline on Log Dataset'),
+    'DSDescLog': (86, '+ HardNet on Log'),
+    'DSSiameseLog': (193, '+ HardNet Siamese on Log'),
+    'DSDescriptor200': (195, '+ HardNet 200'),
+    'DSDescriptor100C_2': (91, '+ HardNet (RGB)'),
+    'DSDescriptor300': (181, '+ HardNet 300'),
+    'DSDescriptorLog200': (184, 'Desc Log 200'),
+    'DSDescriptorLog300': (166, 'Desc Log 300'),
+    'DSDescriptorLog400': (120, 'Desc Log 400'),
+    'DSDescriptorLog500': (114, 'Desc Log 500'),
+    'DSSiameseLog200': (195, 'Siamese Log 200'),
+    'DSSiameseLog300': (195, 'Siamese Log 300'),
+    'DSSiameseLog400': (197, 'Siamese Log 400'),
+    'DSSiameseLog500': (161, 'Siamese Log 500')
 }
 
-baselineNames = ['DSBaseline', 'DSBaselineOnlyGAN', 'DSBaselineOnlyL1']
-descriptorNames = ['DSBaseline', 'DSSIFT100', 'DSDescriptor100_2', 'DSGANDescriptor100', 'DSDescriptorNEP']
-descriptorCompNames = ['DSBaseline', 'DSDescriptor100_2', 'DSDescriptorLoss150', 'DSDescriptor200']
-siameseNames = ['DSBaseline', 'DSDescriptor100_2', 'DSSiamese', 'DSSiameseNoL1', 'DSSiamese100C', 'DSSiameseSIFT']
-setNames = [baselineNames, descriptorNames, siameseNames]
+baselineNames = ['DSBaseline', 'DSBaselineOnlyGAN', 'DSBaselineOnlyL1', 'DSBaselineLog']
+descriptorNames = ['DSBaseline', 'DSSIFT100', 'DSDescriptor100_2', 'DSGANDescriptor100', 'DSDescriptorNEP', 'DSDescLog'] 
+descriptorCompNames = ['DSBaseline', 'DSDescriptor100_2', 'DSDescriptorLoss150', 'DSDescriptor200', 'DSDescriptor300', 'DSDescLog']
+descriptorLogNames = ['DSBaseline', 'DSDescLog', 'DSDescriptorLog200', 'DSDescriptorLog300', 'DSDescriptorLog400', 'DSDescriptorLog500']
+siameseLogNames = ['DSBaseline', 'DSSiameseLog', 'DSSiameseLog200', 'DSSiameseLog300', 'DSSiameseLog400', 'DSSiameseLog500']
+siameseNames = ['DSBaseline', 'DSDescriptor100_2', 'DSSiamese', 'DSSiameseNoL1', 'DSSiamese100C', 'DSSiameseSIFT', 'DSSiameseLog']
+setNames = [baselineNames, descriptorNames, descriptorCompNames, descriptorLogNames, siameseLogNames, siameseNames]
 
 class Comparator():
     def __init__(self, dataDir, manDataDir, runsDir, runNames, ids=[], savePath='./figures', saveOnly=False, splitPath = './split.csv', maxWidth=1000):
@@ -68,7 +83,7 @@ class Comparator():
                 self.currentSplitId = i
                 break
         if not found:
-            print("No split found for id %s!" % key)
+            print("No split found for id %s!" % imgId)
             self.currentSplitId = None
 
     def makeFigure(self):
@@ -137,14 +152,17 @@ class Comparator():
 
         axIdx = 0
         for name, (epoch, title) in self.runNames.items():
-            imgPath = os.path.join(self.runsDir, name, 'test_' + str(epoch), 'images', imgId + '_fake_B.jpg')
-            img = image.imread(imgPath)
-            img = cv2.resize(img, (imgWidth, imgHeight))
             self.axs[axIdx//3+1, axIdx % 3].clear()
-            self.axs[axIdx//3+1, axIdx % 3].imshow(img)
             self.axs[axIdx//3+1, axIdx % 3].title.set_text(title)
-
-            axIdx += 1
+            try:
+                imgPath = os.path.join(self.runsDir, name, 'test_' + str(epoch), 'images', imgId + '_fake_B.jpg')
+                img = image.imread(imgPath)
+                img = cv2.resize(img, (imgWidth, imgHeight))
+                self.axs[axIdx//3+1, axIdx % 3].imshow(img)
+            except:
+                pass
+            finally:
+                axIdx += 1
 
         plt.axis('scaled')
 
@@ -162,7 +180,6 @@ class Comparator():
             xlim = (coords[0], coords[1])
             ylim = (coords[2], coords[3])
 
-        print("Saving figure with coords: %i, %i, %i, %i" % (xlim[0], xlim[1], ylim[0], ylim[1]))
         xWidth = xlim[1]-xlim[0]
         yCenter = int((ylim[0]+ylim[1])/2)
 
@@ -178,14 +195,32 @@ class Comparator():
         imgWidth = img.shape[1]//2
         imgHeight = img.shape[0]
         imgA = img[:, 0:imgWidth]
-
         yHeightHalf = int(xWidth*imgHeight/imgWidth/2) 
 
-        imgCropped = imgA[int(yCenter-yHeightHalf):int(yCenter+yHeightHalf),int(xlim[0]):int(xlim[1])]
+        xOffset = 0
+        yOffset = 0
+
+        if int(xlim[1]) > imgWidth:
+            xOffset = imgWidth - int(xlim[1])
+        elif int(xlim[0]) < 0:
+            xOffset = -int(xlim[0])
+        
+        if int(yCenter+yHeightHalf) > imgHeight:
+            yOffset = imgHeight - int(yCenter+yHeightHalf)
+        elif int(yCenter-yHeightHalf) < 0:
+            yOffset = -int(yCenter-yHeightHalf)
+        
+        xLow = int(xlim[0]) + xOffset
+        xHigh = int(xlim[1]) + xOffset
+        yLow = int(yCenter-yHeightHalf) + yOffset
+        yHigh = int(yCenter+yHeightHalf) + yOffset
+        print("Saving figure with coords: %i, %i, %i, %i" % (xLow, xHigh, yLow, yHigh))
+
+        imgCropped = imgA[yLow:yHigh,xLow:xHigh]
         self.saveImage(imgCropped, os.path.join(folderPath, 'Dark_' + str(self.currentSplitId) + '.jpg'))
 
         imgB = img[:, imgWidth:]
-        imgCropped = imgB[int(yCenter-yHeightHalf):int(yCenter+yHeightHalf),int(xlim[0]):int(xlim[1])]
+        imgCropped = imgB[yLow:yHigh,xLow:xHigh]
         self.saveImage(imgCropped, os.path.join(folderPath, 'GT_' + str(self.currentSplitId) + '.jpg'))
 
         imgPath = os.path.join(self.manDataDir, self.imgId + '.jpg')
@@ -193,7 +228,7 @@ class Comparator():
         imgWidth = img.shape[1]//2
         imgHeight = img.shape[0]
         imgA = img[:, 0:imgWidth]
-        imgCropped = imgA[int(yCenter-yHeightHalf):int(yCenter+yHeightHalf),int(xlim[0]):int(xlim[1])]
+        imgCropped = imgA[yLow:yHigh,xLow:xHigh]
         self.saveImage(imgCropped, os.path.join(folderPath, 'Man_' + str(self.currentSplitId) + '.jpg'))
 
         for name, (epoch, title) in self.runNames.items():
@@ -201,7 +236,7 @@ class Comparator():
             imgPath = os.path.join(self.runsDir, name, 'test_' + str(epoch), 'images', self.imgId + '_fake_B.jpg')
             img = image.imread(imgPath)
             img = cv2.resize(img, (imgWidth, imgHeight))
-            imgCropped = img[int(yCenter-yHeightHalf):int(yCenter+yHeightHalf),int(xlim[0]):int(xlim[1])]
+            imgCropped = img[yLow:yHigh,xLow:xHigh]
             self.saveImage(imgCropped, os.path.join(folderPath, title + '_' + str(self.currentSplitId) + '.jpg'))
     
     def saveImage(self, image, path):
@@ -224,23 +259,28 @@ ids = ['10003_00_0.1s', '10032_03_0.1s', '10228_04_0.04s' ,'10006_06_0.1s', '101
 ids = ['10003_00_0.1s', '10003_00_0.04s', '10016_00_0.1s', '10016_00_0.04s', '10030_00_0.1s', '10030_00_0.04s', '10032_00_0.1s', '10032_00_0.04s', '10040_00_0.1s', '10040_00_0.04s', '10074_00_0.1s', '10167_00_0.1s']
 
 ids = {
-    # '10003_00_0.1s'     : [926, 1257, 986, 761],
-    # '10003_00_0.04s'    : [926, 1257, 986, 761],
-    # '10016_00_0.1s'     : [144, 1125, 1248, 684],
-    # '10016_00_0.04s'    : [144, 1125, 1248, 684],
-    # '10030_00_0.1s'     : [0, 2119, 1415, 0],
-    # '10030_00_0.04s'    : [0, 2119, 1415, 0],
-    # '10032_00_0.1s'     : [1358, 1899, 1145, 858],
-    # '10032_00_0.04s'    : [1358, 1899, 1145, 858],
-    # '10040_00_0.1s'     : [449, 1531, 702, 40],
-    # '10040_00_0.04s'    : [449, 1531, 702, 40],
-    # '10074_00_0.1s'     : [0, 2119, 1415, 0],
-    # '10167_00_0.1s'     : None,
-    # '10228_04_0.04s'     : [205, 1826, 1165, 195],
-    # '10006_06_0.1s'     : [292, 1379, 893, 224],
-    # '10191_09_0.04s'     : [438, 1681, 908, 209],
+    '10003_00_0.1s'     : [926, 1257, 986, 761],
+    '10003_00_0.04s'    : [926, 1257, 986, 761],
+    '10016_00_0.1s'     : [144, 1125, 1248, 684],
+    '10016_00_0.04s'    : [144, 1125, 1248, 684],
+    '10030_00_0.1s'     : [0, 2119, 1415, 0],
+    '10030_00_0.04s'    : [0, 2119, 1415, 0],
+    '10032_00_0.1s'     : [1358, 1899, 1145, 858],
+    '10032_00_0.04s'    : [1358, 1899, 1145, 858],
+    '10040_00_0.1s'     : [449, 1531, 702, 40],
+    '10040_00_0.04s'    : [449, 1531, 702, 40],
+    '10074_00_0.1s'     : [0, 2119, 1415, 0],
+    '10167_00_0.1s'     : None,
+    '10228_04_0.04s'     : [205, 1826, 1165, 195],
+    '10006_06_0.1s'     : [292, 1379, 893, 224],
+    '10191_09_0.04s'     : [438, 1681, 908, 209],
     '10016_09_0.1s'     : None,
-    '10054_00_0.1s'     : [706, 1988, 898, 85]
+    '10054_00_0.1s'     : [706, 1988, 898, 85],
+    '10032_07_0.1s'     : [1358, 1899, 1145, 858],
+    '10074_00_0.1s'     : [164, 1124, 1004, 378],
+    '10227_02_0.04s'    : [327, 1519, 726, 19],
+    '10101_04_0.1s'     : [1028, 2113, 703, 6],
+    '10139_09_0.1s'         : [0, 2119, 1415, 0]
 }
 
 if selection == '0':
